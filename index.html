@@ -3,30 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jam Canvas OS - v1.3.0</title>
+    <title>Jam Canvas OS - v1.5.0 (Viewer Edition)</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
-        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; }
+        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; user-select: none; }
+        
         .glass-card { 
-            background: rgba(255, 255, 255, 0.03); 
-            backdrop-filter: blur(30px); 
-            border: 1px solid rgba(255, 255, 255, 0.1); 
+            background: rgba(255, 255, 255, 0.02); 
+            backdrop-filter: blur(50px); 
+            border: 1px solid rgba(255, 255, 255, 0.08); 
             border-radius: 2rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
         }
-        .glass-card:hover { border-color: rgba(255, 255, 255, 0.2); transform: translateY(-5px); }
+
         .glow-bg {
             position: absolute; width: 100vw; height: 100vh;
-            filter: blur(120px); opacity: 0.5; z-index: -1;
-            transition: background 2s ease;
+            filter: blur(180px); opacity: 0.4; z-index: -1;
+            transition: background 4s ease-in-out;
         }
-        .widget-label { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: rgba(255,255,255,0.3); margin-bottom: 1rem; display: block; }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        .widget-label { 
+            font-size: 9px; 
+            font-weight: 900; 
+            text-transform: uppercase; 
+            letter-spacing: 0.4em; 
+            color: rgba(255,255,255,0.25); 
+            margin-bottom: 1rem; 
+            display: block; 
+        }
+
+        .lyrics-line {
+            transition: all 0.5s ease;
+            filter: blur(1px);
+            opacity: 0.3;
+        }
+        
+        .lyrics-active {
+            color: white;
+            opacity: 1;
+            filter: blur(0px);
+            transform: scale(1.05) translateX(10px);
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+
+        .scanline {
+            width: 100%; height: 2px;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
+            animation: scanline 8s linear infinite;
+        }
+
+        .drag-handle {
+            cursor: move;
+        }
     </style>
 </head>
 <body>
@@ -37,27 +74,32 @@
 
         const CLIENT_ID = "4a1a9ff821ca4ea2a00f9f665dab598b"; 
         const REDIRECT_URI = "https://julian4-spot.github.io/jam-dashboard/";
-        const VERSION = "v1.3.0";
+        const VERSION = "v1.5.0";
 
         function App() {
             const [token, setToken] = useState(window.localStorage.getItem("spotify_token") || "");
             const [data, setData] = useState(null);
+            const [queue, setQueue] = useState([]);
             const [jamLink, setJamLink] = useState(window.localStorage.getItem("jam_link") || "");
             const [showSettings, setShowSettings] = useState(false);
             
-            // Layout Settings
+            // Layout Status (Positionen der Docks)
             const [layout, setLayout] = useState({
                 showLyrics: true,
                 showQR: true,
                 showNext: true,
-                accentColor: "#1DB954"
+                accentColor: "#1DB954",
+                order: ["main", "qr", "lyrics", "progress", "next"]
             });
 
             useEffect(() => {
                 const hash = window.location.hash;
                 if (hash) {
                     const t = new URLSearchParams(hash.substring(1)).get("access_token");
-                    if(t) { setToken(t); window.localStorage.setItem("spotify_token", t); }
+                    if(t) { 
+                        setToken(t); 
+                        window.localStorage.setItem("spotify_token", t); 
+                    }
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }
             }, []);
@@ -66,137 +108,170 @@
                 if (!token) return;
                 const fetchSpotify = async () => {
                     try {
-                        const res = await fetch("https://api.spotify.com/v1/me/player", {
-                            headers: { Authorization: `Bearer ${token}` }
-                        });
-                        if (res.status === 200) setData(await res.json());
+                        const [playerRes, queueRes] = await Promise.all([
+                            fetch("https://api.spotify.com/v1/me/player", {
+                                headers: { Authorization: `Bearer ${token}` }
+                            }),
+                            fetch("https://api.spotify.com/v1/me/player/queue", {
+                                headers: { Authorization: `Bearer ${token}` }
+                            })
+                        ]);
+
+                        if (playerRes.status === 200) setData(await playerRes.json());
+                        if (queueRes.status === 200) {
+                            const qData = await queueRes.json();
+                            setQueue(qData.queue || []);
+                        }
                     } catch (e) { console.error(e); }
                 };
+
                 fetchSpotify();
-                const interval = setInterval(fetchSpotify, 3000);
+                const interval = setInterval(fetchSpotify, 2000);
                 return () => clearInterval(interval);
             }, [token]);
 
+            const login = () => {
+                const scopes = "user-read-currently-playing user-read-playback-state user-read-playback-position";
+                window.location.href=`https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}`;
+            };
+
             if (!token) {
                 return (
-                    <div className="h-screen flex items-center justify-center bg-zinc-950">
-                        <button onClick={() => window.location.href=`https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=user-read-currently-playing user-read-playback-state`} 
-                                className="bg-white text-black px-12 py-6 rounded-full font-black text-xl hover:scale-110 transition-all">
-                            DASHBOARD LOGIN
-                        </button>
+                    <div className="h-screen flex items-center justify-center bg-black">
+                        <div className="text-center">
+                            <h1 className="text-4xl font-black italic mb-8 tracking-tighter">JAM CANVAS</h1>
+                            <button onClick={login} className="bg-white text-black px-10 py-4 rounded-full font-black hover:invert transition-all">
+                                DASHBOARD AKTIVIEREN
+                            </button>
+                        </div>
                     </div>
                 );
             }
 
-            return (
-                <div className="h-screen w-full p-8 relative overflow-hidden flex flex-col">
-                    <div className="glow-bg" style={{ background: `radial-gradient(circle at 50% 50%, ${layout.accentColor} 0%, transparent 70%)` }}></div>
-                    
-                    {/* Top Bar */}
-                    <div className="flex justify-between items-center mb-8 z-10">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-white/10 px-4 py-1 rounded-full text-[10px] font-black tracking-widest uppercase border border-white/5">{VERSION}</div>
-                            <input 
-                                className="bg-white/5 border border-white/10 rounded-full px-6 py-2 text-sm outline-none focus:border-white/30 w-64 transition-all"
-                                placeholder="Jam Link hier einfügen..."
-                                value={jamLink}
-                                onChange={(e) => {setJamLink(e.target.value); window.localStorage.setItem("jam_link", e.target.value);}}
-                            />
+            // Widgets als Komponenten für einfaches Reordering
+            const Widgets = {
+                main: (
+                    <div key="main" className="col-span-12 lg:col-span-4 row-span-4 glass-card p-10 flex flex-col items-center justify-center text-center">
+                        <span className="widget-label">Now Playing</span>
+                        <div className="relative w-full mb-8">
+                            <img src={data?.item?.album?.images[0]?.url} className="w-full aspect-square rounded-[2rem] shadow-2xl border border-white/5 object-cover" />
                         </div>
-                        <button onClick={() => setShowSettings(!showSettings)} className="w-12 h-12 glass-card flex items-center justify-center rounded-2xl hover:rotate-90">
-                            ⚙️
+                        <h1 className="text-4xl font-black italic uppercase tracking-tighter mb-2 truncate w-full">{data?.item?.name || "Warte..."}</h1>
+                        <p className="text-xl text-zinc-500 font-bold">{data?.item?.artists?.[0]?.name}</p>
+                    </div>
+                ),
+                qr: layout.showQR && (
+                    <div key="qr" className="col-span-12 lg:col-span-2 row-span-2 glass-card p-6 flex flex-col items-center justify-center">
+                        <span className="widget-label">Join Session</span>
+                        <div className="p-3 bg-white rounded-2xl mb-4">
+                            {jamLink ? (
+                                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(jamLink)}&color=000&bgcolor=fff`} className="w-24 h-24 mix-blend-multiply" />
+                            ) : (
+                                <div className="w-24 h-24 flex items-center justify-center text-black font-black text-[8px] text-center">LINK FEHLT</div>
+                            )}
+                        </div>
+                        <p className="text-[8px] font-black opacity-30 uppercase tracking-widest">Handy scannen</p>
+                    </div>
+                ),
+                lyrics: layout.showLyrics && (
+                    <div key="lyrics" className="col-span-12 lg:col-span-6 row-span-4 glass-card p-12 overflow-hidden relative">
+                        <span className="widget-label">Live Stream</span>
+                        <div className="scanline absolute top-0 left-0"></div>
+                        <div className="space-y-6 text-4xl font-black italic flex flex-col h-full justify-center">
+                            <p className="lyrics-line">Everything you hear</p>
+                            <p className="lyrics-line lyrics-active">Is part of the experience</p>
+                            <p className="lyrics-line">Visualized in real-time</p>
+                            <p className="lyrics-line">Enjoy the show</p>
+                        </div>
+                    </div>
+                ),
+                progress: (
+                    <div key="progress" className="col-span-12 lg:col-span-8 row-span-2 glass-card p-10 flex flex-col justify-center">
+                        <span className="widget-label">System Status</span>
+                        <div className="space-y-6">
+                            <div className="h-3 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                <div className="h-full transition-all duration-1000" style={{ width: `${(data?.progress_ms / data?.item?.duration_ms) * 100}%`, backgroundColor: layout.accentColor }}></div>
+                            </div>
+                            <div className="flex justify-between text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                                <span>{Math.floor(data?.progress_ms/60000)}:{String(Math.floor((data?.progress_ms%60000)/1000)).padStart(2, '0')}</span>
+                                <span className="text-white opacity-40">{data?.item?.album?.name}</span>
+                                <span>{Math.floor(data?.item?.duration_ms/60000)}:{String(Math.floor((data?.item?.duration_ms%60000)/1000)).padStart(2, '0')}</span>
+                            </div>
+                        </div>
+                    </div>
+                ),
+                next: layout.showNext && (
+                    <div key="next" className="col-span-12 lg:col-span-4 row-span-2 glass-card p-8">
+                        <span className="widget-label">Up Next</span>
+                        <div className="space-y-4">
+                            {queue.slice(0, 3).map((track, i) => (
+                                <div key={i} className="flex items-center gap-4 opacity-60">
+                                    <img src={track.album?.images[2]?.url} className="w-10 h-10 rounded-lg border border-white/10" />
+                                    <div className="truncate">
+                                        <div className="text-xs font-black italic uppercase truncate">{track.name}</div>
+                                        <div className="text-[9px] text-zinc-500 font-bold truncate uppercase">{track.artists[0].name}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )
+            };
+
+            return (
+                <div className="h-screen w-full p-10 relative overflow-hidden flex flex-col gap-8">
+                    <div className="glow-bg" style={{ background: `radial-gradient(circle at 50% 50%, ${layout.accentColor} 0%, transparent 80%)` }}></div>
+                    
+                    {/* Header bar (Nur Info, keine Steuerung) */}
+                    <div className="flex justify-between items-center z-20">
+                        <div className="flex items-center gap-4">
+                            <div className="text-xs font-black tracking-[0.5em] opacity-20 uppercase">Jam Monitor {VERSION}</div>
+                            {showSettings && (
+                                <input 
+                                    className="bg-white/5 border border-white/10 rounded-full px-6 py-2 text-xs outline-none focus:border-white/20 w-64 font-bold"
+                                    placeholder="Jam Link hier einfügen..."
+                                    value={jamLink}
+                                    onChange={(e) => {setJamLink(e.target.value); window.localStorage.setItem("jam_link", e.target.value);}}
+                                />
+                            )}
+                        </div>
+                        <button onClick={() => setShowSettings(!showSettings)} className="w-12 h-12 glass-card flex items-center justify-center hover:bg-white/5 border-none">
+                            {showSettings ? "✕" : "⚙️"}
                         </button>
                     </div>
 
-                    {/* Main Workspace Grid */}
+                    {/* Dashboard Workspace */}
                     <div className="flex-grow grid grid-cols-12 grid-rows-6 gap-6 z-10">
-                        
-                        {/* 1. Haupt-Cover Modul */}
-                        <div className="col-span-12 lg:col-span-4 row-span-4 glass-card p-8 flex flex-col items-center justify-center text-center">
-                            <span className="widget-label">Now Playing</span>
-                            <img src={data?.item?.album?.images[0]?.url} className="w-full aspect-square rounded-[2.5rem] shadow-2xl mb-8 object-cover border border-white/10" />
-                            <h1 className="text-4xl font-black italic uppercase tracking-tighter mb-2 truncate w-full">{data?.item?.name || "No Track"}</h1>
-                            <p className="text-xl text-zinc-500 font-bold">{data?.item?.artists?.[0]?.name}</p>
-                        </div>
-
-                        {/* 2. QR Code Modul */}
-                        {layout.showQR && (
-                            <div className="col-span-12 lg:col-span-2 row-span-2 glass-card p-6 flex flex-col items-center justify-center text-center">
-                                <span className="widget-label">Join Jam</span>
-                                {jamLink ? (
-                                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(jamLink)}&color=ffffff&bgcolor=00000000`} className="w-32 h-32 mb-4" />
-                                ) : (
-                                    <div className="w-32 h-32 bg-white/5 rounded-2xl flex items-center justify-center text-[10px] text-zinc-600 p-4">Link oben einfügen</div>
-                                )}
-                                <p className="text-[10px] font-bold opacity-40 uppercase">Scan to Participate</p>
-                            </div>
-                        )}
-
-                        {/* 3. Lyrics Modul */}
-                        {layout.showLyrics && (
-                            <div className="col-span-12 lg:col-span-6 row-span-4 glass-card p-10 overflow-hidden relative">
-                                <span className="widget-label">Lyrics Preview</span>
-                                <div className="space-y-6 text-3xl font-black italic opacity-30 select-none">
-                                    <p className="text-white opacity-100">I'm feeling the rhythm...</p>
-                                    <p>Tonight is the night we jam</p>
-                                    <p>The lights are low, the bass is high</p>
-                                    <p>We're dancing under the digital sky</p>
-                                    <p>Digital sky, oh digital sky...</p>
-                                </div>
-                                <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black/50 to-transparent"></div>
-                            </div>
-                        )}
-
-                        {/* 4. Progress & Controls (Wide) */}
-                        <div className="col-span-12 lg:col-span-8 row-span-2 glass-card p-8 flex flex-col justify-center">
-                            <span className="widget-label">Playback State</span>
-                            <div className="flex items-center gap-8">
-                                <div className="flex-grow space-y-4">
-                                    <div className="h-4 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                        <div className="h-full transition-all duration-1000" style={{ width: `${(data?.progress_ms / data?.item?.duration_ms) * 100}%`, backgroundColor: layout.accentColor }}></div>
-                                    </div>
-                                    <div className="flex justify-between text-xs font-black text-zinc-500 uppercase tracking-widest">
-                                        <span>{Math.floor(data?.progress_ms/60000)}:{String(Math.floor((data?.progress_ms%60000)/1000)).padStart(2, '0')}</span>
-                                        <span>{data?.device?.name || "No Device Connected"}</span>
-                                        <span>{Math.floor(data?.item?.duration_ms/60000)}:{String(Math.floor((data?.item?.duration_ms%60000)/1000)).padStart(2, '0')}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 5. Up Next (Kleine Liste) */}
-                        {layout.showNext && (
-                            <div className="col-span-12 lg:col-span-4 row-span-2 glass-card p-8">
-                                <span className="widget-label">Up Next</span>
-                                <div className="flex items-center gap-4 opacity-40">
-                                    <div className="w-12 h-12 bg-white/10 rounded-xl"></div>
-                                    <div>
-                                        <div className="w-32 h-3 bg-white/20 rounded mb-2"></div>
-                                        <div className="w-20 h-2 bg-white/10 rounded"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        {layout.order.map(key => Widgets[key])}
                     </div>
 
                     {/* Settings Sidebar */}
                     {showSettings && (
-                        <div className="absolute right-0 top-0 h-full w-96 glass-card rounded-none border-l border-white/10 p-12 z-50 animate-in slide-in-from-right duration-300">
-                            <h2 className="text-3xl font-black italic mb-10 uppercase tracking-tighter">Edit Layout</h2>
+                        <div className="absolute right-0 top-0 h-full w-80 glass-card rounded-none border-l border-white/10 p-10 z-[100] animate-in slide-in-from-right duration-500">
+                            <h2 className="text-2xl font-black italic mb-10 uppercase tracking-tighter">Docks Anpassen</h2>
                             <div className="space-y-8">
-                                <div className="flex justify-between items-center">
-                                    <span className="font-bold">Songtexte anzeigen</span>
-                                    <input type="checkbox" checked={layout.showLyrics} onChange={e => setLayout({...layout, showLyrics: e.target.checked})} className="w-6 h-6 accent-green-500" />
+                                <div className="space-y-4">
+                                    <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Sichtbarkeit</p>
+                                    {["Lyrics", "QR", "Next"].map(item => (
+                                        <div key={item} className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
+                                            <span className="text-xs font-bold">{item} Dock</span>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={layout[`show${item}`]} 
+                                                onChange={e => setLayout({...layout, [`show${item}`]: e.target.checked})} 
+                                                className="accent-white" 
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="font-bold">QR Code anzeigen</span>
-                                    <input type="checkbox" checked={layout.showQR} onChange={e => setLayout({...layout, showQR: e.target.checked})} className="w-6 h-6 accent-green-500" />
+                                <div className="space-y-4">
+                                    <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Accent Color</p>
+                                    <input type="color" value={layout.accentColor} onChange={e => setLayout({...layout, accentColor: e.target.value})} className="w-full bg-transparent h-10 rounded cursor-pointer" />
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="font-bold">Farbschema</span>
-                                    <input type="color" value={layout.accentColor} onChange={e => setLayout({...layout, accentColor: e.target.value})} className="bg-transparent border-none w-10 h-10" />
+                                <div className="pt-8 border-t border-white/5">
+                                    <p className="text-[9px] text-zinc-600 mb-4">Im Viewer-Modus ist die Steuerung deaktiviert.</p>
+                                    <button onClick={() => {window.localStorage.clear(); window.location.reload();}} className="w-full py-4 text-red-500 text-[10px] font-black uppercase tracking-widest border border-red-500/20 rounded-xl">Reset Session</button>
                                 </div>
-                                <button onClick={() => {window.localStorage.clear(); window.location.reload();}} className="w-full py-4 bg-red-500/10 text-red-500 rounded-2xl font-black mt-10">LOGOUT</button>
                             </div>
                         </div>
                     )}
