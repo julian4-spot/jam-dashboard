@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jam Dashboard OS - v2.1.0</title>
+    <title>Jam Dashboard - v2.2.0"</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap');
         
         body { 
             background-color: #000; 
@@ -24,41 +24,58 @@
         .desktop {
             height: 100vh;
             width: 100vw;
-            background: radial-gradient(circle at center, #111 0%, #000 100%);
+            background: #000;
             position: relative;
             overflow: hidden;
+        }
+
+        /* Dynamischer Hintergrund-Glow */
+        .bg-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 120vw;
+            height: 120vh;
+            background: radial-gradient(circle at center, var(--glow-color, #1DB95433) 0%, transparent 70%);
+            filter: blur(80px);
+            opacity: 0.6;
+            transition: background 2s ease;
+            pointer-events: none;
+            z-index: 0;
         }
 
         .scanline {
             width: 100%; height: 100%;
             position: absolute; top: 0; left: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.03) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.01), rgba(0, 255, 0, 0.005), rgba(0, 0, 255, 0.01));
-            background-size: 100% 4px, 3px 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.05) 50%);
+            background-size: 100% 4px;
             pointer-events: none;
             z-index: 1000;
+            opacity: 0.3;
         }
 
         /* Fenster System */
         .window {
             position: absolute;
-            background: rgba(20, 20, 20, 0.7);
-            backdrop-filter: blur(25px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 1.5rem;
+            background: rgba(15, 15, 15, 0.6);
+            backdrop-filter: blur(40px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 2rem;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6);
             min-width: 200px;
             min-height: 150px;
             overflow: hidden;
             z-index: 10;
+            transition: transform 0.1s ease-out;
         }
 
         .window-header {
-            padding: 0.75rem 1rem;
-            background: rgba(255, 255, 255, 0.03);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 1rem 1.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -77,76 +94,86 @@
             position: absolute;
             bottom: 0;
             right: 0;
-            width: 20px;
-            height: 20px;
+            width: 24px;
+            height: 24px;
             cursor: nwse-resize;
-            background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.2) 50%);
+            background: linear-gradient(135deg, transparent 60%, rgba(255,255,255,0.15) 60%);
         }
 
-        .album-art {
+        /* Now Playing Styles */
+        .album-art-container {
+            position: relative;
             width: 100%;
             aspect-ratio: 1;
+        }
+        .album-art {
+            width: 100%;
+            height: 100%;
             object-fit: cover;
-            border-radius: 1rem;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border-radius: 1.2rem;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.8);
         }
 
         .progress-bar {
-            height: 6px;
-            background: rgba(255,255,255,0.1);
+            height: 4px;
+            background: rgba(255,255,255,0.08);
             border-radius: 10px;
             overflow: hidden;
-            margin-top: 1rem;
+            margin-top: 1.5rem;
         }
         .progress-fill {
             height: 100%;
-            background: #1DB954;
+            background: #fff;
+            box-shadow: 0 0 15px #fff;
             transition: width 1s linear;
         }
 
-        /* Dock */
+        /* Taskbar / Dock */
         .taskbar {
             position: absolute;
-            bottom: 1.5rem;
+            bottom: 2rem;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(10, 10, 10, 0.8);
-            backdrop-filter: blur(20px);
+            background: rgba(20, 20, 20, 0.5);
+            backdrop-filter: blur(30px);
             border: 1px solid rgba(255,255,255,0.1);
-            padding: 0.5rem;
-            border-radius: 2rem;
+            padding: 0.6rem;
+            border-radius: 2.5rem;
             display: flex;
-            gap: 0.5rem;
+            gap: 0.6rem;
             z-index: 1100;
         }
 
         .task-btn {
-            width: 45px;
-            height: 45px;
-            border-radius: 1rem;
+            width: 50px;
+            height: 50px;
+            border-radius: 1.2rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.03);
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             border: 1px solid transparent;
+            font-size: 1.2rem;
         }
-        .task-btn:hover { background: rgba(255,255,255,0.1); transform: scale(1.1); }
-        .task-btn.active { border-color: #1DB954; background: rgba(29, 185, 84, 0.1); }
-
-        #qrcode canvas {
-            width: 100% !important;
-            height: auto !important;
-            border-radius: 0.5rem;
-        }
+        .task-btn:hover { background: rgba(255,255,255,0.08); transform: scale(1.15) translateY(-5px); }
+        .task-btn.active { border-color: rgba(255,255,255,0.4); background: rgba(255, 255, 255, 0.1); }
 
         .queue-item {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            padding: 0.5rem;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            gap: 1rem;
+            padding: 0.75rem;
+            border-radius: 1rem;
+            transition: background 0.2s;
+        }
+        .queue-item:hover { background: rgba(255,255,255,0.03); }
+
+        #qrcode canvas {
+            width: 100% !important;
+            height: auto !important;
+            mix-blend-mode: multiply;
         }
     </style>
 </head>
@@ -154,12 +181,12 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect, useRef, useMemo } = React;
 
-        const CLIENT_ID = "52f166f3b18a4aee8d2a91649a371134"; 
+        const CLIENT_ID = "4a1a9ff821ca4ea2a00f9f665dab598b"; 
         const REDIRECT_URI = "https://julian4-spot.github.io/jam-dashboard/";
 
-        // Drag & Drop Hook
+        // Drag & Resize Logic
         function useDraggable(initialPos, initialSize) {
             const [pos, setPos] = useState(initialPos);
             const [size, setSize] = useState(initialSize);
@@ -181,8 +208,8 @@
                     }
                     if (isResizing) {
                         setSize(s => ({ 
-                            width: Math.max(200, s.width + e.movementX), 
-                            height: Math.max(150, s.height + e.movementY) 
+                            width: Math.max(250, s.width + e.movementX), 
+                            height: Math.max(180, s.height + e.movementY) 
                         }));
                     }
                 };
@@ -204,7 +231,6 @@
             return { pos, size, onMouseDown };
         }
 
-        // Fenster Komponente
         const Window = ({ title, children, initialPos, initialSize, visible, onClose }) => {
             const { pos, size, onMouseDown } = useDraggable(initialPos, initialSize);
             if (!visible) return null;
@@ -220,9 +246,9 @@
                     }}
                 >
                     <div className="window-header" onMouseDown={onMouseDown}>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white/50">{title}</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{title}</span>
                         <div className="flex gap-2">
-                            <div className="w-2.5 h-2.5 rounded-full bg-white/10 hover:bg-red-500 cursor-pointer" onClick={onClose}></div>
+                            <button className="w-2.5 h-2.5 rounded-full bg-white/10 hover:bg-white/30 transition-colors" onClick={onClose}></button>
                         </div>
                     </div>
                     <div className="window-content">
@@ -238,37 +264,20 @@
             const [data, setData] = useState(null);
             const [queue, setQueue] = useState([]);
             const [jamUrl, setJamUrl] = useState(window.localStorage.getItem("jam_url") || "");
-            
-            // Sichtbarkeit
             const [wins, setWins] = useState({ player: true, qr: true, queue: true });
 
             const qrRef = useRef(null);
 
-            // Login Logic (Identisch geblieben)
             useEffect(() => {
-                const urlParams = new URLSearchParams(window.location.search);
-                const code = urlParams.get('code');
-                if (code) {
-                    const getToken = async () => {
-                        const body = await fetch('https://accounts.spotify.com/api/token', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: new URLSearchParams({
-                                client_id: CLIENT_ID,
-                                grant_type: 'authorization_code',
-                                code: code,
-                                redirect_uri: REDIRECT_URI,
-                                code_verifier: window.localStorage.getItem('code_verifier'),
-                            }),
-                        });
-                        const response = await body.json();
-                        if (response.access_token) {
-                            setToken(response.access_token);
-                            window.localStorage.setItem("spotify_token", response.access_token);
-                            window.history.replaceState({}, document.title, window.location.pathname);
-                        }
-                    };
-                    getToken();
+                const hash = window.location.hash;
+                if (hash) {
+                    const params = new URLSearchParams(hash.substring(1));
+                    const accessToken = params.get("access_token");
+                    if (accessToken) {
+                        setToken(accessToken);
+                        window.localStorage.setItem("spotify_token", accessToken);
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }
                 }
             }, []);
 
@@ -278,9 +287,13 @@
                     try {
                         const pRes = await fetch("https://api.spotify.com/v1/me/player", { headers: { Authorization: `Bearer ${token}` } });
                         if (pRes.status === 200) setData(await pRes.json());
+                        
                         const qRes = await fetch("https://api.spotify.com/v1/me/player/queue", { headers: { Authorization: `Bearer ${token}` } });
-                        if (qRes.status === 200) setQueue((await qRes.json()).queue.slice(0, 5));
-                    } catch (e) {}
+                        if (qRes.status === 200) {
+                            const qData = await qRes.json();
+                            setQueue(qData.queue.slice(0, 8));
+                        }
+                    } catch (e) { console.error(e); }
                 };
                 fetchData();
                 const i = setInterval(fetchData, 3000);
@@ -290,90 +303,135 @@
             useEffect(() => {
                 if (wins.qr && jamUrl && qrRef.current) {
                     qrRef.current.innerHTML = "";
-                    new QRCode(qrRef.current, { text: jamUrl, width: 256, height: 256 });
+                    new QRCode(qrRef.current, { 
+                        text: jamUrl, 
+                        width: 512, 
+                        height: 512,
+                        colorDark : "#000000",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.H
+                    });
                 }
             }, [wins.qr, jamUrl]);
 
+            // Dynamische Hintergrundfarbe basierend auf Spotify Status (Simuliert)
+            const glowStyle = useMemo(() => {
+                return { "--glow-color": data?.item ? 'rgba(29, 185, 84, 0.25)' : 'rgba(255, 255, 255, 0.05)' };
+            }, [data]);
+
             if (!token) return (
                 <div className="desktop flex items-center justify-center">
-                    <button className="bg-white text-black px-10 py-4 rounded-full font-black uppercase tracking-widest" onClick={() => window.location.href=`https://accounts.spotify.com/authorize?${new URLSearchParams({response_type:'code',client_id:CLIENT_ID,scope:'user-read-currently-playing user-read-playback-state',redirect_uri:REDIRECT_URI}).toString()}`}>Login</button>
+                    <button 
+                        className="bg-white text-black px-12 py-5 rounded-full font-black uppercase tracking-widest hover:scale-105 transition-transform shadow-2xl shadow-white/10" 
+                        onClick={() => {
+                            const scopes = "user-read-currently-playing user-read-playback-state";
+                            window.location.href = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}`;
+                        }}
+                    >
+                        Spotify Verbinden
+                    </button>
                 </div>
             );
 
             return (
-                <div className="desktop">
+                <div className="desktop" style={glowStyle}>
+                    <div className="bg-glow"></div>
                     <div className="scanline"></div>
 
-                    {/* Musik Fenster */}
+                    {/* NOW PLAYING - Immersives Design */}
                     <Window 
-                        title="Now Playing" 
-                        initialPos={{x: 50, y: 50}} 
-                        initialSize={{width: 400, height: 600}}
+                        title="Live" 
+                        initialPos={{x: 80, y: 80}} 
+                        initialSize={{width: 450, height: 650}}
                         visible={wins.player}
                         onClose={() => setWins({...wins, player: false})}
                     >
                         {data && data.item ? (
-                            <div className="flex flex-col gap-6">
-                                <img src={data.item.album.images[0].url} className="album-art" />
-                                <div>
-                                    <h1 className="text-2xl font-black italic uppercase leading-none truncate">{data.item.name}</h1>
-                                    <p className="text-white/40 font-bold truncate">{data.item.artists[0].name}</p>
+                            <div className="flex flex-col gap-8 h-full">
+                                <div className="album-art-container">
+                                    <img src={data.item.album.images[0].url} className="album-art" />
                                 </div>
-                                <div className="progress-bar">
-                                    <div className="progress-fill" style={{width: `${(data.progress_ms / data.item.duration_ms) * 100}%`}}></div>
+                                <div className="space-y-2">
+                                    <h1 className="text-4xl font-black italic uppercase leading-[0.9] tracking-tighter">{data.item.name}</h1>
+                                    <p className="text-xl text-white/40 font-semibold tracking-tight">{data.item.artists.map(a => a.name).join(", ")}</p>
+                                </div>
+                                <div className="mt-auto">
+                                    <div className="flex justify-between text-[10px] font-black uppercase text-white/20 mb-2 tracking-widest">
+                                        <span>Playing</span>
+                                        <span>{Math.floor(data.item.duration_ms / 60000)}:{(Math.floor(data.item.duration_ms / 1000) % 60).toString().padStart(2, '0')}</span>
+                                    </div>
+                                    <div className="progress-bar">
+                                        <div className="progress-fill" style={{width: `${(data.progress_ms / data.item.duration_ms) * 100}%`}}></div>
+                                    </div>
                                 </div>
                             </div>
-                        ) : <p className="text-center py-20 text-white/20 uppercase font-black tracking-tighter">No Signal</p>}
+                        ) : (
+                            <div className="flex flex-col items-center justify-center h-full opacity-20">
+                                <div className="w-20 h-20 border-2 border-white rounded-full animate-ping mb-8"></div>
+                                <p className="uppercase font-black tracking-[0.5em] text-xs text-center">Warte auf Signal...</p>
+                            </div>
+                        )}
                     </Window>
 
-                    {/* QR Code Fenster */}
+                    {/* JAM JOINER - Clean QR */}
                     <Window 
-                        title="Jam Joiner" 
-                        initialPos={{x: 500, y: 50}} 
-                        initialSize={{width: 280, height: 420}}
+                        title="Jam Join" 
+                        initialPos={{x: 580, y: 80}} 
+                        initialSize={{width: 320, height: 460}}
                         visible={wins.qr}
                         onClose={() => setWins({...wins, qr: false})}
                     >
-                        <div className="flex flex-col gap-4">
-                            <div id="qrcode" ref={qrRef} className="bg-white p-4 rounded-xl"></div>
-                            <input 
-                                type="text" 
-                                placeholder="Link..." 
-                                className="bg-white/5 border border-white/10 p-3 rounded-lg text-xs"
-                                value={jamUrl}
-                                onChange={(e) => setJamUrl(e.target.value)}
-                            />
+                        <div className="flex flex-col gap-6 items-center">
+                            <div className="bg-white p-6 rounded-[2rem] shadow-2xl w-full">
+                                <div id="qrcode" ref={qrRef}></div>
+                            </div>
+                            <div className="w-full space-y-2">
+                                <p className="text-[10px] font-black uppercase text-white/20 text-center tracking-widest">Jam Link einfügen</p>
+                                <input 
+                                    type="text" 
+                                    placeholder="spotify:jam:..." 
+                                    className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs text-center focus:border-white/30 outline-none transition-all"
+                                    value={jamUrl}
+                                    onChange={(e) => {
+                                        setJamUrl(e.target.value);
+                                        window.localStorage.setItem("jam_url", e.target.value);
+                                    }}
+                                />
+                            </div>
                         </div>
                     </Window>
 
-                    {/* Queue Fenster */}
+                    {/* QUEUE - Minimal List */}
                     <Window 
-                        title="Queue" 
-                        initialPos={{x: 820, y: 50}} 
-                        initialSize={{width: 300, height: 450}}
+                        title="Up Next" 
+                        initialPos={{x: 950, y: 80}} 
+                        initialSize={{width: 350, height: 500}}
                         visible={wins.queue}
                         onClose={() => setWins({...wins, queue: false})}
                     >
-                        <div className="space-y-1">
-                            {queue.map((track, i) => (
+                        <div className="flex flex-col gap-2">
+                            {queue.length > 0 ? queue.map((track, i) => (
                                 <div key={i} className="queue-item">
-                                    <img src={track.album.images[2].url} className="w-8 h-8 rounded" />
-                                    <div className="truncate">
-                                        <p className="text-[10px] font-bold truncate">{track.name}</p>
-                                        <p className="text-[9px] text-white/30 truncate">{track.artists[0].name}</p>
+                                    <img src={track.album.images[2].url} className="w-10 h-10 rounded-lg shadow-lg" />
+                                    <div className="truncate flex-grow">
+                                        <p className="text-xs font-black truncate uppercase tracking-tight">{track.name}</p>
+                                        <p className="text-[10px] text-white/40 font-bold truncate">{track.artists[0].name}</p>
                                     </div>
+                                    <div className="text-[9px] font-black text-white/10 uppercase italic">Next</div>
                                 </div>
-                            ))}
+                            )) : (
+                                <p className="text-center py-20 text-white/10 text-[10px] font-black uppercase tracking-widest">Queue leer</p>
+                            )}
                         </div>
                     </Window>
 
-                    {/* Dock */}
+                    {/* OS DOCK */}
                     <div className="taskbar">
-                        <div className={`task-btn ${wins.player ? 'active' : ''}`} onClick={() => setWins({...wins, player: !wins.player})}>🎵</div>
-                        <div className={`task-btn ${wins.qr ? 'active' : ''}`} onClick={() => setWins({...wins, qr: !wins.qr})}>📱</div>
-                        <div className={`task-btn ${wins.queue ? 'active' : ''}`} onClick={() => setWins({...wins, queue: !wins.queue})}>📜</div>
-                        <div className="w-[1px] h-6 bg-white/10 mx-2 self-center"></div>
-                        <div className="task-btn text-red-500" onClick={() => {window.localStorage.clear(); window.location.reload();}}>❌</div>
+                        <div className={`task-btn ${wins.player ? 'active' : ''}`} onClick={() => setWins({...wins, player: !wins.player})}>💿</div>
+                        <div className={`task-btn ${wins.qr ? 'active' : ''}`} onClick={() => setWins({...wins, qr: !wins.qr})}>📲</div>
+                        <div className={`task-btn ${wins.queue ? 'active' : ''}`} onClick={() => setWins({...wins, queue: !wins.queue})}>📑</div>
+                        <div className="w-[1px] h-8 bg-white/10 mx-2 self-center"></div>
+                        <div className="task-btn text-white/20 hover:text-red-500" onClick={() => {window.localStorage.clear(); window.location.reload();}}>⏻</div>
                     </div>
                 </div>
             );
