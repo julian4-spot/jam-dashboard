@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify Jam Dashboard</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #050505; color: white; margin: 0; overflow-x: hidden; }
+        .animate-spin-slow { animation: spin 8s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const CLIENT_ID = "4a1a9ff821ca4ea2a00f9f665dab598b"; 
+        
+        // Holt die aktuelle URL für den Spotify Redirect
+        const getRedirectUri = () => {
+            const url = window.location.href.split('#')[0].split('?')[0];
+            return url.replace(/\/$/, "");
+        };
+
+        const REDIRECT_URI = getRedirectUri();
+        const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
+        const RESPONSE_TYPE = "token";
+        const SCOPES = "user-read-currently-playing user-read-playback-state";
+
+        function App() {
+            const [token, setToken] = useState("");
+            const [nowPlaying, setNowPlaying] = useState(null);
+            const [copied, setCopied] = useState(false);
+
+            useEffect(() => {
+                const hash = window.location.hash;
+                let storedToken = window.localStorage.getItem("spotify_token");
+
+                if (hash) {
+                    const params = new URLSearchParams(hash.substring(1));
+                    const accessToken = params.get("access_token");
+                    if (accessToken) {
+                        storedToken = accessToken;
+                        window.localStorage.setItem("spotify_token", accessToken);
+                        window.history.pushState("", document.title, window.location.pathname);
+                    }
+                }
+                if (storedToken) setToken(storedToken);
+            }, []);
+
+            useEffect(() => {
+                if (token) {
+                    const fetchTrack = async () => {
+                        try {
+                            const res = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
+                                headers: { Authorization: `Bearer ${token}` }
+                            });
+                            if (res.status === 204) { setNowPlaying(null); return; }
+                            if (res.status === 401) { logout(); return; }
+                            const data = await res.json();
+                            setNowPlaying(data);
+                        } catch (e) { console.error(e); }
+                    };
+                    fetchTrack();
+                    const interval = setInterval(fetchTrack, 3000);
+                    return () => clearInterval(interval);
+                }
+            }, [token]);
+
+            const login = () => {
+                window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=${RESPONSE_TYPE}&scope=${encodeURIComponent(SCOPES)}&show_dialog=true`;
+            };
+
+            const logout = () => {
+                setToken("");
+                window.localStorage.removeItem("spotify_token");
+                setNowPlaying(null);
+            };
+
+            const copyUri = () => {
+                const textArea = document.createElement("textarea");
+                textArea.value = REDIRECT_URI;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            };
+
+            if (!token) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center p-6">
+                        <div className="max-w-md w-full bg-zinc-900/40 border border-zinc-800 p-10 rounded-[3rem] text-center backdrop-blur-xl">
+                            <div className="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-green-500/20">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            </div>
+                            <h1 className="text-3xl font-black mb-2 italic tracking-tighter uppercase">Jam Vercel</h1>
+                            <p className="text-zinc-500 text-[10px] font-bold tracking-[0.3em] mb-10 uppercase">Security Pass</p>
+                            
+                            <div className="bg-black/60 border border-zinc-800 p-6 rounded-2xl mb-8 text-left">
+                                <p className="text-zinc-400 text-[11px] mb-4">Kopiere diese URL und füge sie bei Spotify ein:</p>
+                                <div className="flex gap-2">
+                                    <div className="flex-grow bg-zinc-900 p-3 rounded-xl border border-white/5 font-mono text-[9px] text-green-500 truncate">{REDIRECT_URI}</div>
+                                    <button onClick={copyUri} className="bg-white text-black px-4 rounded-xl font-black text-[10px]">
+                                        {copied ? "OK" : "COPY"}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button onClick={login} className="w-full bg-green-500 hover:bg-green-400 text-black font-black py-5 rounded-2xl transition-all shadow-2xl shadow-green-500/20">
+                                DASHBOARD ÖFFNEN
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen flex items-center justify-center p-10">
+                    {!nowPlaying ? (
+                        <div className="text-center opacity-20">
+                            <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                            <p className="text-[10px] font-black tracking-[0.4em] uppercase">Warte auf Musik...</p>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center gap-10 max-w-lg w-full animate-in fade-in duration-1000">
+                            <img src={nowPlaying.item.album.images[0].url} className="w-80 h-80 rounded-[3.5rem] shadow-2xl border border-white/5" alt="Cover" />
+                            <div className="text-center">
+                                <h1 className="text-5xl font-black italic uppercase tracking-tighter leading-tight mb-2">{nowPlaying.item.name}</h1>
+                                <p className="text-xl text-zinc-500 font-bold">{nowPlaying.item.artists[0].name}</p>
+                                <div className="mt-10 w-64 bg-zinc-900 h-1 rounded-full mx-auto overflow-hidden">
+                                    <div className="bg-green-500 h-full transition-all duration-1000" style={{ width: `${(nowPlaying.progress_ms / nowPlaying.item.duration_ms) * 100}%` }} />
+                                </div>
+                            </div>
+                            <button onClick={logout} className="text-[9px] font-black text-zinc-800 hover:text-red-500 tracking-widest uppercase mt-4">Verbindung trennen</button>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
