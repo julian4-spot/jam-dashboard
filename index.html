@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jam Canvas OS - v1.6.1 (Auth Fix)</title>
+    <title>Jam Canvas OS - v1.6.2 (Auth Fix & Redirect)</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -89,7 +89,7 @@
 
         const CLIENT_ID = "4a1a9ff821ca4ea2a00f9f665dab598b"; 
         const REDIRECT_URI = "https://julian4-spot.github.io/jam-dashboard/";
-        const VERSION = "v1.6.1";
+        const VERSION = "v1.6.2";
 
         function App() {
             const [token, setToken] = useState(window.localStorage.getItem("spotify_token") || "");
@@ -97,6 +97,7 @@
             const [queue, setQueue] = useState([]);
             const [jamLink, setJamLink] = useState(window.localStorage.getItem("jam_link") || "");
             const [showSettings, setShowSettings] = useState(false);
+            const [error, setError] = useState("");
             
             const savedOrder = window.localStorage.getItem("dock_order");
             const [layout, setLayout] = useState({
@@ -110,21 +111,24 @@
             useEffect(() => {
                 const hash = window.location.hash;
                 const urlParams = new URLSearchParams(window.location.search);
-                const code = urlParams.get('code');
+                
+                // Falls ein "code" in der URL ist, weisen wir darauf hin, dass wir den Token-Flow brauchen
+                if (urlParams.get('code')) {
+                    setError("Code-Modus erkannt. Bitte klicke erneut auf 'Anmelden' für den Token-Zugriff.");
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
 
-                // Support for Implicit Grant (Token in Hash)
+                // Implicit Grant Flow (Token direkt in der URL-Hash)
                 if (hash) {
-                    const t = new URLSearchParams(hash.substring(1)).get("access_token");
+                    const params = new URLSearchParams(hash.substring(1));
+                    const t = params.get("access_token");
                     if(t) { 
                         setToken(t); 
                         window.localStorage.setItem("spotify_token", t); 
                         window.history.replaceState({}, document.title, window.location.pathname);
+                        setError("");
                     }
                 }
-                
-                // Note: Auth Code flow (response_type=code) usually requires a backend 
-                // to exchange the code for a token. If you just need access in frontend, 
-                // "token" is normally used, but here we update the login call as requested.
             }, []);
 
             useEffect(() => {
@@ -146,7 +150,6 @@
                             setQueue(qData.queue || []);
                         }
                         if (playerRes.status === 401) {
-                            // Token expired
                             setToken("");
                             window.localStorage.removeItem("spotify_token");
                         }
@@ -160,8 +163,8 @@
 
             const login = () => {
                 const scopes = "user-read-currently-playing user-read-playback-state user-read-playback-position";
-                // Changed response_type to code as requested
-                window.location.href=`https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}`;
+                // Wir MÜSSEN response_type=token nutzen, damit wir im Frontend direkt arbeiten können
+                window.location.href=`https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}`;
             };
 
             const moveDock = (index, direction) => {
@@ -178,11 +181,22 @@
                 return (
                     <div className="h-screen flex items-center justify-center bg-black">
                         <div className="text-center">
-                            <h1 className="text-4xl font-black italic mb-8 tracking-tighter uppercase">Jam Monitor</h1>
-                            <p className="text-zinc-500 mb-8 text-sm font-bold tracking-widest uppercase">Viewer Edition</p>
+                            <h1 className="text-4xl font-black italic mb-4 tracking-tighter uppercase">Jam Monitor</h1>
+                            <p className="text-zinc-500 mb-8 text-sm font-bold tracking-widest uppercase">Canvas Edition</p>
+                            
+                            {error && (
+                                <div className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-xs font-bold uppercase">
+                                    {error}
+                                </div>
+                            )}
+
                             <button onClick={login} className="bg-white text-black px-10 py-4 rounded-full font-black hover:invert transition-all">
                                 JETZT ANMELDEN
                             </button>
+                            
+                            <p className="mt-8 text-[10px] text-zinc-600 uppercase tracking-widest max-w-xs mx-auto leading-loose">
+                                Hinweis: Bitte stelle sicher, dass in deinem Spotify Dashboard "Implicit Grant" aktiviert ist.
+                            </p>
                         </div>
                     </div>
                 );
