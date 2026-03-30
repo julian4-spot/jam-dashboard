@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jam Dashboard - v2.2.0"</title>
+    <title>Jam Dashboard - v2.3.0</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&family=Space+Mono:wght@400;700&display=swap');
         
         body { 
             background-color: #000; 
@@ -18,162 +18,113 @@
             font-family: 'Inter', sans-serif; 
             overflow: hidden; 
             margin: 0;
-            user-select: none;
         }
 
-        .desktop {
-            height: 100vh;
-            width: 100vw;
-            background: #000;
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Dynamischer Hintergrund-Glow */
-        .bg-glow {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 120vw;
-            height: 120vh;
-            background: radial-gradient(circle at center, var(--glow-color, #1DB95433) 0%, transparent 70%);
-            filter: blur(80px);
-            opacity: 0.6;
-            transition: background 2s ease;
-            pointer-events: none;
+        /* Dynamischer Hintergrund */
+        .bg-dynamic {
+            position: fixed;
+            inset: 0;
             z-index: 0;
         }
 
-        .scanline {
-            width: 100%; height: 100%;
-            position: absolute; top: 0; left: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.05) 50%);
-            background-size: 100% 4px;
-            pointer-events: none;
-            z-index: 1000;
-            opacity: 0.3;
+        .bg-layer {
+            position: absolute;
+            inset: -10%;
+            background-size: cover;
+            background-position: center;
+            filter: blur(80px) brightness(0.3) saturate(1.2);
+            transition: background-image 2s ease-in-out;
         }
 
-        /* Fenster System */
-        .window {
+        .overlay-vignette {
             position: absolute;
-            background: rgba(15, 15, 15, 0.6);
-            backdrop-filter: blur(40px) saturate(150%);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 2rem;
+            inset: 0;
+            background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.9) 100%);
+        }
+
+        /* Layout Container */
+        .app-container {
+            position: relative;
+            z-index: 10;
+            height: 100vh;
+            width: 100vw;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.6);
-            min-width: 200px;
-            min-height: 150px;
+            padding: 3rem;
+        }
+
+        /* Glaseffekte */
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Fortschrittsbalken */
+        .progress-container {
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
             overflow: hidden;
-            z-index: 10;
-            transition: transform 0.1s ease-out;
-        }
-
-        .window-header {
-            padding: 1rem 1.5rem;
-            background: rgba(255, 255, 255, 0.02);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: move;
-        }
-
-        .window-content {
-            flex-grow: 1;
-            padding: 1.5rem;
-            overflow: auto;
-            scrollbar-width: none;
-        }
-        .window-content::-webkit-scrollbar { display: none; }
-
-        .resize-handle {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 24px;
-            height: 24px;
-            cursor: nwse-resize;
-            background: linear-gradient(135deg, transparent 60%, rgba(255,255,255,0.15) 60%);
-        }
-
-        /* Now Playing Styles */
-        .album-art-container {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 1;
-        }
-        .album-art {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 1.2rem;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.8);
         }
 
         .progress-bar {
-            height: 4px;
-            background: rgba(255,255,255,0.08);
-            border-radius: 10px;
-            overflow: hidden;
-            margin-top: 1.5rem;
-        }
-        .progress-fill {
             height: 100%;
             background: #fff;
-            box-shadow: 0 0 15px #fff;
             transition: width 1s linear;
+            box-shadow: 0 0 15px #fff;
         }
 
-        /* Taskbar / Dock */
-        .taskbar {
-            position: absolute;
-            bottom: 2rem;
+        /* Navigation Dock */
+        .dock {
+            position: fixed;
+            bottom: 1.5rem;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(20, 20, 20, 0.5);
-            backdrop-filter: blur(30px);
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(20px);
+            padding: 0.5rem;
+            border-radius: 1.5rem;
             border: 1px solid rgba(255,255,255,0.1);
-            padding: 0.6rem;
-            border-radius: 2.5rem;
             display: flex;
-            gap: 0.6rem;
-            z-index: 1100;
+            gap: 0.5rem;
+            z-index: 100;
         }
 
-        .task-btn {
-            width: 50px;
-            height: 50px;
-            border-radius: 1.2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255,255,255,0.03);
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border: 1px solid transparent;
-            font-size: 1.2rem;
-        }
-        .task-btn:hover { background: rgba(255,255,255,0.08); transform: scale(1.15) translateY(-5px); }
-        .task-btn.active { border-color: rgba(255,255,255,0.4); background: rgba(255, 255, 255, 0.1); }
-
-        .queue-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 0.75rem;
+        .dock-item {
+            padding: 0.4rem 0.8rem;
             border-radius: 1rem;
-            transition: background 0.2s;
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: rgba(255,255,255,0.3);
         }
-        .queue-item:hover { background: rgba(255,255,255,0.03); }
+
+        .dock-item.active {
+            background: #fff;
+            color: #000;
+        }
+
+        /* Spezielle Animationen */
+        @keyframes rotate-slow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-vinyl {
+            animation: rotate-slow 10s linear infinite;
+        }
 
         #qrcode canvas {
             width: 100% !important;
             height: auto !important;
-            mix-blend-mode: multiply;
+        }
+
+        .cyber-text {
+            font-family: 'Space Mono', monospace;
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
         }
     </style>
 </head>
@@ -181,91 +132,18 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef, useMemo } = React;
+        const { useState, useEffect, useRef } = React;
 
         const CLIENT_ID = "4a1a9ff821ca4ea2a00f9f665dab598b"; 
-        const REDIRECT_URI = "https://julian4-spot.github.io/jam-dashboard/";
-
-        // Drag & Resize Logic
-        function useDraggable(initialPos, initialSize) {
-            const [pos, setPos] = useState(initialPos);
-            const [size, setSize] = useState(initialSize);
-            const [isDragging, setIsDragging] = useState(false);
-            const [isResizing, setIsResizing] = useState(false);
-
-            const onMouseDown = (e) => {
-                if (e.target.closest('.resize-handle')) {
-                    setIsResizing(true);
-                    return;
-                }
-                setIsDragging(true);
-            };
-
-            useEffect(() => {
-                const handleMouseMove = (e) => {
-                    if (isDragging) {
-                        setPos(p => ({ x: p.x + e.movementX, y: p.y + e.movementY }));
-                    }
-                    if (isResizing) {
-                        setSize(s => ({ 
-                            width: Math.max(250, s.width + e.movementX), 
-                            height: Math.max(180, s.height + e.movementY) 
-                        }));
-                    }
-                };
-                const handleMouseUp = () => {
-                    setIsDragging(false);
-                    setIsResizing(false);
-                };
-
-                if (isDragging || isResizing) {
-                    window.addEventListener('mousemove', handleMouseMove);
-                    window.addEventListener('mouseup', handleMouseUp);
-                }
-                return () => {
-                    window.removeEventListener('mousemove', handleMouseMove);
-                    window.removeEventListener('mouseup', handleMouseUp);
-                };
-            }, [isDragging, isResizing]);
-
-            return { pos, size, onMouseDown };
-        }
-
-        const Window = ({ title, children, initialPos, initialSize, visible, onClose }) => {
-            const { pos, size, onMouseDown } = useDraggable(initialPos, initialSize);
-            if (!visible) return null;
-
-            return (
-                <div 
-                    className="window"
-                    style={{ 
-                        left: pos.x, 
-                        top: pos.y, 
-                        width: size.width, 
-                        height: size.height 
-                    }}
-                >
-                    <div className="window-header" onMouseDown={onMouseDown}>
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{title}</span>
-                        <div className="flex gap-2">
-                            <button className="w-2.5 h-2.5 rounded-full bg-white/10 hover:bg-white/30 transition-colors" onClick={onClose}></button>
-                        </div>
-                    </div>
-                    <div className="window-content">
-                        {children}
-                    </div>
-                    <div className="resize-handle"></div>
-                </div>
-            );
-        };
+        const REDIRECT_URI = window.location.origin + window.location.pathname;
 
         function App() {
             const [token, setToken] = useState(window.localStorage.getItem("spotify_token") || "");
             const [data, setData] = useState(null);
             const [queue, setQueue] = useState([]);
+            const [layout, setLayout] = useState("classic"); 
             const [jamUrl, setJamUrl] = useState(window.localStorage.getItem("jam_url") || "");
-            const [wins, setWins] = useState({ player: true, qr: true, queue: true });
-
+            
             const qrRef = useRef(null);
 
             useEffect(() => {
@@ -301,137 +179,208 @@
             }, [token]);
 
             useEffect(() => {
-                if (wins.qr && jamUrl && qrRef.current) {
+                if (jamUrl && qrRef.current) {
                     qrRef.current.innerHTML = "";
                     new QRCode(qrRef.current, { 
                         text: jamUrl, 
-                        width: 512, 
-                        height: 512,
+                        width: 256, 
+                        height: 256,
                         colorDark : "#000000",
-                        colorLight : "#ffffff",
-                        correctLevel : QRCode.CorrectLevel.H
+                        colorLight : "#ffffff"
                     });
                 }
-            }, [wins.qr, jamUrl]);
-
-            // Dynamische Hintergrundfarbe basierend auf Spotify Status (Simuliert)
-            const glowStyle = useMemo(() => {
-                return { "--glow-color": data?.item ? 'rgba(29, 185, 84, 0.25)' : 'rgba(255, 255, 255, 0.05)' };
-            }, [data]);
+            }, [layout, jamUrl]);
 
             if (!token) return (
-                <div className="desktop flex items-center justify-center">
-                    <button 
-                        className="bg-white text-black px-12 py-5 rounded-full font-black uppercase tracking-widest hover:scale-105 transition-transform shadow-2xl shadow-white/10" 
-                        onClick={() => {
-                            const scopes = "user-read-currently-playing user-read-playback-state";
-                            window.location.href = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}`;
-                        }}
-                    >
-                        Spotify Verbinden
-                    </button>
+                <div className="h-screen w-screen flex items-center justify-center bg-black">
+                    <button className="bg-white text-black px-10 py-4 rounded-full font-black uppercase tracking-widest" onClick={() => {
+                        const scopes = "user-read-currently-playing user-read-playback-state";
+                        window.location.href = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}`;
+                    }}>Connect Spotify</button>
                 </div>
             );
 
-            return (
-                <div className="desktop" style={glowStyle}>
-                    <div className="bg-glow"></div>
-                    <div className="scanline"></div>
+            const renderLayout = () => {
+                if (!data?.item) return <div className="flex-grow flex items-center justify-center opacity-20 uppercase font-black tracking-widest text-xs">Waiting...</div>;
+                const track = data.item;
+                const progress = (data.progress_ms / track.duration_ms) * 100;
 
-                    {/* NOW PLAYING - Immersives Design */}
-                    <Window 
-                        title="Live" 
-                        initialPos={{x: 80, y: 80}} 
-                        initialSize={{width: 450, height: 650}}
-                        visible={wins.player}
-                        onClose={() => setWins({...wins, player: false})}
-                    >
-                        {data && data.item ? (
-                            <div className="flex flex-col gap-8 h-full">
-                                <div className="album-art-container">
-                                    <img src={data.item.album.images[0].url} className="album-art" />
+                switch(layout) {
+                    case "classic":
+                        return (
+                            <div className="flex-grow flex items-center gap-16">
+                                <img src={track.album.images[0].url} className="w-[450px] h-[450px] rounded-3xl shadow-2xl" />
+                                <div className="space-y-6">
+                                    <h1 className="text-6xl font-black italic uppercase leading-none tracking-tighter">{track.name}</h1>
+                                    <p className="text-2xl font-bold text-white/50">{track.artists.map(a => a.name).join(", ")}</p>
+                                    <div className="w-80 progress-container"><div className="progress-bar" style={{width: `${progress}%`}}></div></div>
+                                </div>
+                            </div>
+                        );
+                    case "vinyl":
+                        return (
+                            <div className="flex-grow flex flex-col items-center justify-center gap-8 text-center">
+                                <div className="relative group">
+                                    <div className="absolute inset-0 bg-black rounded-full animate-vinyl opacity-80 border-4 border-white/5 overflow-hidden">
+                                        <div className="absolute inset-0 opacity-10" style={{background: 'repeating-radial-gradient(circle, #000 0, #000 2px, #fff 3px)'}}></div>
+                                    </div>
+                                    <img src={track.album.images[0].url} className="w-64 h-64 rounded-full relative z-10 border-4 border-black" />
                                 </div>
                                 <div className="space-y-2">
-                                    <h1 className="text-4xl font-black italic uppercase leading-[0.9] tracking-tighter">{data.item.name}</h1>
-                                    <p className="text-xl text-white/40 font-semibold tracking-tight">{data.item.artists.map(a => a.name).join(", ")}</p>
-                                </div>
-                                <div className="mt-auto">
-                                    <div className="flex justify-between text-[10px] font-black uppercase text-white/20 mb-2 tracking-widest">
-                                        <span>Playing</span>
-                                        <span>{Math.floor(data.item.duration_ms / 60000)}:{(Math.floor(data.item.duration_ms / 1000) % 60).toString().padStart(2, '0')}</span>
-                                    </div>
-                                    <div className="progress-bar">
-                                        <div className="progress-fill" style={{width: `${(data.progress_ms / data.item.duration_ms) * 100}%`}}></div>
-                                    </div>
+                                    <h1 className="text-4xl font-black uppercase">{track.name}</h1>
+                                    <p className="text-xl text-white/40">{track.artists[0].name}</p>
                                 </div>
                             </div>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center h-full opacity-20">
-                                <div className="w-20 h-20 border-2 border-white rounded-full animate-ping mb-8"></div>
-                                <p className="uppercase font-black tracking-[0.5em] text-xs text-center">Warte auf Signal...</p>
-                            </div>
-                        )}
-                    </Window>
-
-                    {/* JAM JOINER - Clean QR */}
-                    <Window 
-                        title="Jam Join" 
-                        initialPos={{x: 580, y: 80}} 
-                        initialSize={{width: 320, height: 460}}
-                        visible={wins.qr}
-                        onClose={() => setWins({...wins, qr: false})}
-                    >
-                        <div className="flex flex-col gap-6 items-center">
-                            <div className="bg-white p-6 rounded-[2rem] shadow-2xl w-full">
-                                <div id="qrcode" ref={qrRef}></div>
-                            </div>
-                            <div className="w-full space-y-2">
-                                <p className="text-[10px] font-black uppercase text-white/20 text-center tracking-widest">Jam Link einfügen</p>
-                                <input 
-                                    type="text" 
-                                    placeholder="spotify:jam:..." 
-                                    className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs text-center focus:border-white/30 outline-none transition-all"
-                                    value={jamUrl}
-                                    onChange={(e) => {
-                                        setJamUrl(e.target.value);
-                                        window.localStorage.setItem("jam_url", e.target.value);
-                                    }}
-                                />
-                            </div>
-                        </div>
-                    </Window>
-
-                    {/* QUEUE - Minimal List */}
-                    <Window 
-                        title="Up Next" 
-                        initialPos={{x: 950, y: 80}} 
-                        initialSize={{width: 350, height: 500}}
-                        visible={wins.queue}
-                        onClose={() => setWins({...wins, queue: false})}
-                    >
-                        <div className="flex flex-col gap-2">
-                            {queue.length > 0 ? queue.map((track, i) => (
-                                <div key={i} className="queue-item">
-                                    <img src={track.album.images[2].url} className="w-10 h-10 rounded-lg shadow-lg" />
-                                    <div className="truncate flex-grow">
-                                        <p className="text-xs font-black truncate uppercase tracking-tight">{track.name}</p>
-                                        <p className="text-[10px] text-white/40 font-bold truncate">{track.artists[0].name}</p>
-                                    </div>
-                                    <div className="text-[9px] font-black text-white/10 uppercase italic">Next</div>
+                        );
+                    case "cyber":
+                        return (
+                            <div className="flex-grow flex flex-col justify-end p-10 gap-4 cyber-text">
+                                <div className="flex gap-4">
+                                    <div className="px-3 py-1 bg-white text-black font-bold text-[10px]">NOW_PLAYING</div>
+                                    <div className="px-3 py-1 border border-white/20 text-white/50 font-bold text-[10px]">SRC:SPOTIFY_API</div>
                                 </div>
-                            )) : (
-                                <p className="text-center py-20 text-white/10 text-[10px] font-black uppercase tracking-widest">Queue leer</p>
-                            )}
-                        </div>
-                    </Window>
+                                <h1 className="text-[10vw] font-bold leading-[0.8]">{track.name}</h1>
+                                <p className="text-3xl text-white/40">{track.artists[0].name}</p>
+                                <div className="flex gap-1 w-full mt-4">
+                                    {[...Array(50)].map((_, i) => (
+                                        <div key={i} className={`h-1 flex-grow ${i < progress/2 ? 'bg-white' : 'bg-white/10'}`}></div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    case "split":
+                        return (
+                            <div className="flex-grow grid grid-cols-2 h-full py-10">
+                                <div className="flex items-center justify-center">
+                                    <img src={track.album.images[0].url} className="w-[80%] aspect-square object-cover rounded-xl" />
+                                </div>
+                                <div className="flex flex-col justify-center gap-12 px-10">
+                                    <div className="space-y-2">
+                                        <span className="text-xs font-black text-white/20 uppercase tracking-[0.4em]">Up Next</span>
+                                        <div className="space-y-4">
+                                            {queue.slice(0, 3).map((t, i) => (
+                                                <div key={i} className="flex items-center gap-4 opacity-40">
+                                                    <span className="text-xs font-black">0{i+1}</span>
+                                                    <p className="font-bold truncate text-sm uppercase">{t.name}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <h1 className="text-5xl font-black italic uppercase leading-none">{track.name}</h1>
+                                        <p className="text-xl font-bold text-white/40">{track.artists[0].name}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    case "poster":
+                        return (
+                            <div className="flex-grow flex items-stretch py-10">
+                                <div className="w-1/3 glass rounded-3xl p-8 flex flex-col justify-between">
+                                    <div>
+                                        <h1 className="text-4xl font-black uppercase leading-tight italic tracking-tighter">{track.name}</h1>
+                                        <p className="text-lg text-white/40 mt-4">{track.artists[0].name}</p>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-2xl" id="qrcode" ref={qrRef}></div>
+                                </div>
+                                <div className="flex-grow ml-8">
+                                    <img src={track.album.images[0].url} className="w-full h-full object-cover rounded-3xl shadow-2xl" />
+                                </div>
+                            </div>
+                        );
+                    case "minimal":
+                        return (
+                            <div className="flex-grow flex flex-col items-center justify-center text-center p-20">
+                                <h1 className="text-[12vw] font-black tracking-tighter leading-none opacity-10 blur-[2px] absolute inset-0 flex items-center justify-center select-none">{track.name}</h1>
+                                <div className="relative z-10">
+                                    <p className="text-xs font-black uppercase tracking-[1em] mb-4">Playing Now</p>
+                                    <h2 className="text-6xl font-light tracking-tight mb-2">{track.name}</h2>
+                                    <p className="text-xl text-white/30 font-bold uppercase">{track.artists[0].name}</p>
+                                </div>
+                            </div>
+                        );
+                    case "studio":
+                        return (
+                            <div className="flex-grow grid grid-cols-4 gap-6 py-10">
+                                <div className="col-span-3 glass rounded-3xl p-10 flex gap-10 items-center">
+                                    <img src={track.album.images[0].url} className="w-64 h-64 rounded-2xl" />
+                                    <div className="space-y-6 flex-grow">
+                                        <h1 className="text-5xl font-black italic uppercase tracking-tighter">{track.name}</h1>
+                                        <div className="space-y-1">
+                                            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
+                                                <div className="h-full bg-white" style={{width: `${progress}%`}}></div>
+                                            </div>
+                                            <div className="flex justify-between text-[10px] font-black text-white/30">
+                                                <span>LIVE</span>
+                                                <span>{track.artists[0].name}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="col-span-1 glass rounded-3xl p-6 overflow-hidden">
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-white/20 mb-4">Queue</h3>
+                                    <div className="space-y-4">
+                                        {queue.slice(0, 5).map((t, i) => (
+                                            <div key={i} className="flex items-center gap-3">
+                                                <img src={t.album.images[2].url} className="w-8 h-8 rounded" />
+                                                <div className="truncate">
+                                                    <p className="text-[10px] font-bold truncate uppercase">{t.name}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    case "focus":
+                        return (
+                            <div className="flex-grow flex items-center justify-center">
+                                <div className="text-center space-y-12">
+                                    <img src={track.album.images[0].url} className="w-96 h-96 mx-auto rounded-full shadow-[0_0_80px_rgba(255,255,255,0.1)] border-8 border-white/5" />
+                                    <div className="space-y-2">
+                                        <h1 className="text-7xl font-black tracking-tighter uppercase">{track.name}</h1>
+                                        <p className="text-2xl text-white/20 font-bold uppercase tracking-[0.2em]">{track.artists[0].name}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                }
+            };
 
-                    {/* OS DOCK */}
-                    <div className="taskbar">
-                        <div className={`task-btn ${wins.player ? 'active' : ''}`} onClick={() => setWins({...wins, player: !wins.player})}>💿</div>
-                        <div className={`task-btn ${wins.qr ? 'active' : ''}`} onClick={() => setWins({...wins, qr: !wins.qr})}>📲</div>
-                        <div className={`task-btn ${wins.queue ? 'active' : ''}`} onClick={() => setWins({...wins, queue: !wins.queue})}>📑</div>
-                        <div className="w-[1px] h-8 bg-white/10 mx-2 self-center"></div>
-                        <div className="task-btn text-white/20 hover:text-red-500" onClick={() => {window.localStorage.clear(); window.location.reload();}}>⏻</div>
+            return (
+                <div className="relative h-screen w-screen overflow-hidden">
+                    <div className="bg-dynamic">
+                        <div className="bg-layer" style={{ backgroundImage: `url(${data?.item?.album?.images[0]?.url})` }}></div>
+                        <div className="overlay-vignette"></div>
+                    </div>
+
+                    <div className="app-container">
+                        <header className="flex justify-between items-start shrink-0">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-black font-black text-xs">J</div>
+                                <span className="text-[10px] font-black uppercase tracking-[0.5em] text-white/40">Jam Dashboard v2.3</span>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-2xl font-black italic">{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                <p className="text-[9px] font-black uppercase text-white/20">Status: Active</p>
+                            </div>
+                        </header>
+
+                        {renderLayout()}
+                    </div>
+
+                    <div className="dock">
+                        {['classic', 'vinyl', 'cyber', 'split', 'poster', 'minimal', 'studio', 'focus'].map(mode => (
+                            <div 
+                                key={mode} 
+                                className={`dock-item ${layout === mode ? 'active' : ''}`}
+                                onClick={() => setLayout(mode)}
+                            >
+                                {mode}
+                            </div>
+                        ))}
+                        <div className="w-[1px] h-4 bg-white/10 self-center mx-1"></div>
+                        <div className="dock-item hover:text-red-500" onClick={() => {window.localStorage.clear(); window.location.reload();}}>Logout</div>
                     </div>
                 </div>
             );
