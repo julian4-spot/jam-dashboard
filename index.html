@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jam Canvas Dashboard - v1.1.0</title>
+    <title>Jam Canvas Dashboard - v1.1.1</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -11,17 +11,48 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { background-color: #050505; color: white; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; }
-        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .bg-gradient-glow { background: radial-gradient(circle at center, rgba(34, 197, 94, 0.15) 0%, transparent 70%); }
-        .album-shadow { box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.8); }
-        @keyframes pulse-slow { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.1); } }
-        .animate-pulse-slow { animation: pulse-slow 8s ease-in-out infinite; }
         
-        /* Custom Scrollbar für Settings */
+        body { 
+            background-color: #050505; 
+            color: white; 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            overflow: hidden; 
+        }
+
+        .glass { 
+            background: rgba(255, 255, 255, 0.03); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid rgba(255, 255, 255, 0.05); 
+        }
+
+        .album-shadow { 
+            box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.8); 
+        }
+
+        @keyframes pulse-slow { 
+            0%, 100% { opacity: 0.3; transform: scale(1); } 
+            50% { opacity: 0.5; transform: scale(1.05); } 
+        }
+
+        .animate-pulse-slow { 
+            animation: pulse-slow 8s ease-in-out infinite; 
+        }
+
+        /* Custom Progress Bar Glow */
+        .progress-glow {
+            box-shadow: 0 0 20px var(--accent-color);
+        }
+
+        /* Custom Scrollbar */
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
         .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        
+        .text-huge {
+            font-size: clamp(3rem, 10vw, 8rem);
+            line-height: 0.85;
+        }
     </style>
 </head>
 <body>
@@ -35,19 +66,21 @@
         const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
         const TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
         const SCOPES = "user-read-currently-playing user-read-playback-state user-modify-playback-state";
-        const VERSION = "v1.1.0";
+        const VERSION = "v1.1.1";
 
-        // PKCE Utils
+        // PKCE Hilfsfunktionen
         const generateRandomString = (length) => {
             const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
             const values = crypto.getRandomValues(new Uint8Array(length));
             return Array.from(values).map((x) => possible[x % possible.length]).join('');
         };
+
         const sha256 = async (plain) => {
             const encoder = new TextEncoder();
             const data = encoder.encode(plain);
             return window.crypto.subtle.digest('SHA-256', data);
         };
+
         const base64encode = (input) => {
             return btoa(String.fromCharCode(...new Uint8Array(input)))
                 .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
@@ -58,12 +91,11 @@
             const [data, setData] = useState(null);
             const [showSettings, setShowSettings] = useState(false);
             
-            // Personalisierung
+            // UI Einstellungen
             const [settings, setSettings] = useState({
-                glowIntensity: 0.5,
-                blurAmount: 20,
-                showQR: true,
-                accentColor: "#22c55e"
+                glowIntensity: 0.6,
+                accentColor: "#22c55e",
+                showMetadata: true
             });
 
             useEffect(() => {
@@ -93,7 +125,7 @@
                         window.localStorage.setItem("spotify_access_token", result.access_token);
                         window.history.replaceState({}, document.title, window.location.pathname);
                     }
-                } catch (e) { console.error(e); }
+                } catch (e) { console.error("Fehler beim Token-Austausch:", e); }
             };
 
             const login = async () => {
@@ -122,7 +154,7 @@
                         if (response.status === 401) logout();
                         else if (response.status === 200) setData(await response.json());
                         else setData(null);
-                    } catch (e) { console.error(e); }
+                    } catch (e) { console.error("API Fehler:", e); }
                 };
                 fetchData();
                 const interval = setInterval(fetchData, 3000);
@@ -130,7 +162,6 @@
             }, [token]);
 
             const startJam = () => {
-                // Öffnet Spotify App zum Jammen
                 window.location.href = "spotify:jam";
             };
 
@@ -141,143 +172,166 @@
             };
 
             return (
-                <div className="min-h-screen flex items-center justify-center p-10 relative overflow-hidden bg-black">
-                    {/* Dynamic Glow Background */}
+                <div className="min-h-screen flex items-center justify-center p-6 md:p-20 relative overflow-hidden bg-black">
+                    {/* Hintergrund-Glow (Dynamisch) */}
                     <div 
-                        className="absolute inset-0 opacity-50 transition-all duration-1000"
+                        className="absolute inset-0 transition-all duration-1000 animate-pulse-slow"
                         style={{ 
-                            background: `radial-gradient(circle at center, ${settings.accentColor}${Math.floor(settings.glowIntensity * 255).toString(16).padStart(2, '0')} 0%, transparent 70%)` 
+                            background: `radial-gradient(circle at center, ${settings.accentColor}${Math.floor(settings.glowIntensity * 255).toString(16).padStart(2, '0')} 0%, transparent 75%)` 
                         }}
                     ></div>
                     
-                    {/* Header / Version */}
-                    <div className="absolute top-8 left-10 flex items-center gap-4 z-50">
-                        <div className="bg-white/10 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase border border-white/5">
-                            {VERSION}
+                    {/* UI Header: Version & Settings */}
+                    <div className="absolute top-8 left-8 right-8 flex justify-between items-center z-50">
+                        <div className="bg-white/5 border border-white/10 px-4 py-1.5 rounded-full text-[10px] font-black tracking-[0.2em] uppercase backdrop-blur-md">
+                            Build {VERSION}
+                        </div>
+                        <div className="flex gap-4">
+                            <button 
+                                onClick={() => setShowSettings(!showSettings)}
+                                className="w-12 h-12 glass rounded-2xl flex items-center justify-center hover:bg-white/10 transition-all active:scale-90"
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
                         </div>
                     </div>
 
-                    {/* Controls Right */}
-                    <div className="absolute top-8 right-10 flex items-center gap-4 z-50">
-                        <button 
-                            onClick={() => setShowSettings(!showSettings)}
-                            className="w-12 h-12 glass rounded-2xl flex items-center justify-center hover:bg-white/10 transition-colors"
-                        >
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-                        </button>
-                    </div>
-
-                    {/* Settings Panel */}
+                    {/* Settings Panel Overlay */}
                     {showSettings && (
-                        <div className="absolute right-10 top-24 w-80 glass rounded-[2.5rem] p-8 z-50 animate-in fade-in slide-in-from-right-4 duration-300 border border-white/10">
-                            <h3 className="text-xl font-black italic uppercase mb-6 tracking-tighter">Einstellungen</h3>
-                            <div className="space-y-6 custom-scroll">
-                                <div className="space-y-2">
+                        <div className="absolute right-8 top-24 w-80 glass rounded-[2.5rem] p-8 z-50 animate-in fade-in slide-in-from-right-4 duration-300 border border-white/10 shadow-2xl">
+                            <div className="flex justify-between items-center mb-8">
+                                <h3 className="text-xl font-black italic uppercase tracking-tighter">Design</h3>
+                                <button onClick={() => setShowSettings(false)} className="opacity-40 hover:opacity-100 uppercase text-[10px] font-bold">Schließen</button>
+                            </div>
+                            <div className="space-y-8">
+                                <div className="space-y-3">
                                     <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex justify-between">
-                                        Glow Intensity <span>{Math.round(settings.glowIntensity * 100)}%</span>
+                                        Glow Stärke <span>{Math.round(settings.glowIntensity * 100)}%</span>
                                     </label>
-                                    <input type="range" min="0" max="1" step="0.1" value={settings.glowIntensity} onChange={(e) => setSettings({...settings, glowIntensity: parseFloat(e.target.value)})} className="w-full accent-green-500" />
+                                    <input type="range" min="0.1" max="1" step="0.1" value={settings.glowIntensity} onChange={(e) => setSettings({...settings, glowIntensity: parseFloat(e.target.value)})} className="w-full accent-white" />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Akzentfarbe</label>
-                                    <div className="flex gap-2">
-                                        {["#22c55e", "#3b82f6", "#a855f7", "#ec4899", "#f97316"].map(c => (
-                                            <button key={c} onClick={() => setSettings({...settings, accentColor: c})} className={`w-8 h-8 rounded-full border-2 ${settings.accentColor === c ? 'border-white' : 'border-transparent'}`} style={{backgroundColor: c}}></button>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Themenfarbe</label>
+                                    <div className="flex flex-wrap gap-3">
+                                        {["#22c55e", "#3b82f6", "#a855f7", "#ec4899", "#ef4444", "#f59e0b"].map(c => (
+                                            <button 
+                                                key={c} 
+                                                onClick={() => setSettings({...settings, accentColor: c})} 
+                                                className={`w-10 h-10 rounded-full border-4 transition-all ${settings.accentColor === c ? 'border-white scale-110 shadow-lg' : 'border-transparent scale-100'}`} 
+                                                style={{backgroundColor: c}}
+                                            ></button>
                                         ))}
                                     </div>
                                 </div>
-                                <button onClick={logout} className="w-full py-4 bg-red-500/10 text-red-500 rounded-xl font-bold text-sm hover:bg-red-500/20 transition-colors mt-4">Logout</button>
+                                <div className="pt-4 border-t border-white/5">
+                                    <button onClick={logout} className="w-full py-4 bg-red-500/10 text-red-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-500/20 transition-all">Abmelden</button>
+                                </div>
                             </div>
                         </div>
                     )}
 
                     {!token ? (
-                        <div className="max-w-md w-full glass p-12 rounded-[3.5rem] text-center relative z-10 border border-white/10 shadow-2xl">
-                            <div className="w-20 h-20 bg-green-500 rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-2xl shadow-green-500/20">
-                                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        /* Login Screen */
+                        <div className="max-w-md w-full glass p-12 rounded-[4rem] text-center relative z-10 border border-white/10 shadow-2xl animate-in fade-in zoom-in duration-500">
+                            <div className="w-24 h-24 bg-green-500 rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 shadow-2xl shadow-green-500/30">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                             </div>
-                            <h1 className="text-5xl font-black mb-4 italic uppercase tracking-tighter">Jam Canvas</h1>
-                            <p className="text-zinc-500 text-sm mb-12 font-medium">Dein interaktives Spotify Dashboard.<br/>Bereit für die nächste Session?</p>
-                            <button onClick={login} className="w-full bg-green-500 hover:bg-green-400 text-black font-black py-7 rounded-[2rem] transition-all shadow-xl active:scale-95 text-xl">
-                                LOGIN MIT SPOTIFY
+                            <h1 className="text-6xl font-black mb-6 italic uppercase tracking-tighter leading-none">Jam<br/>Canvas</h1>
+                            <p className="text-zinc-500 text-sm mb-12 font-medium leading-relaxed uppercase tracking-widest">Connect your sound.<br/>Control the vibe.</p>
+                            <button onClick={login} className="w-full bg-white text-black font-black py-8 rounded-[2.5rem] transition-all hover:scale-[1.02] active:scale-95 text-xl uppercase tracking-tighter shadow-2xl shadow-white/10">
+                                Spotify Login
                             </button>
                         </div>
                     ) : !data ? (
-                        <div className="text-center relative z-10 space-y-12">
-                            <div className="w-20 h-20 border-4 border-zinc-900 border-t-green-500 rounded-full animate-spin mx-auto shadow-2xl"></div>
-                            <div className="space-y-4">
-                                <p className="opacity-40 font-black uppercase text-sm tracking-[0.5em]">Warte auf Wiedergabe</p>
-                                <button onClick={startJam} className="px-8 py-4 glass rounded-full text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all">
-                                    Spotify Jam starten
+                        /* Waiting State */
+                        <div className="text-center relative z-10 space-y-16 animate-in fade-in duration-1000">
+                            <div className="relative">
+                                <div className="absolute inset-0 bg-green-500/20 blur-3xl animate-pulse rounded-full"></div>
+                                <div className="w-24 h-24 border-4 border-white/5 border-t-white rounded-full animate-spin mx-auto relative z-10"></div>
+                            </div>
+                            <div className="space-y-6">
+                                <p className="opacity-40 font-black uppercase text-xs tracking-[0.8em]">Warte auf Sound</p>
+                                <button onClick={startJam} className="px-10 py-5 glass rounded-full text-xs font-black uppercase tracking-[0.3em] hover:bg-white/10 transition-all border border-white/10">
+                                    Spotify Jam öffnen
                                 </button>
                             </div>
                         </div>
                     ) : (
-                        <div className="flex flex-col md:flex-row items-center gap-20 max-w-7xl w-full relative z-10 animate-in fade-in zoom-in duration-1000">
+                        /* Main Dashboard */
+                        <div className="flex flex-col lg:flex-row items-center gap-16 lg:gap-32 max-w-[90rem] w-full relative z-10 animate-in fade-in slide-in-from-bottom-10 duration-1000">
                             
-                            {/* Left Side: Art & QR */}
-                            <div className="relative shrink-0 flex flex-col items-center gap-8">
-                                <div className="relative group">
-                                    <div className="absolute -inset-10 opacity-30 rounded-[6rem] blur-3xl transition-all duration-1000" style={{ backgroundColor: settings.accentColor }}></div>
-                                    <img 
-                                        src={data.item.album.images[0].url} 
-                                        className="w-[32rem] h-[32rem] rounded-[5rem] album-shadow relative z-10 border border-white/5 object-cover" 
-                                        alt="Album Cover" 
-                                    />
-                                </div>
+                            {/* Linke Seite: Album Cover */}
+                            <div className="relative shrink-0 group">
+                                <div 
+                                    className="absolute -inset-16 opacity-40 rounded-[8rem] blur-[100px] transition-all duration-1000 group-hover:opacity-60" 
+                                    style={{ backgroundColor: settings.accentColor }}
+                                ></div>
+                                <img 
+                                    src={data.item.album.images[0].url} 
+                                    className="w-[28rem] h-[28rem] md:w-[36rem] md:h-[36rem] rounded-[5rem] md:rounded-[6rem] album-shadow relative z-10 border border-white/10 object-cover transform transition-transform duration-700 hover:scale-[1.02]" 
+                                    alt="Album Cover" 
+                                />
                                 
-                                <button 
-                                    onClick={startJam}
-                                    className="relative z-10 flex items-center gap-3 px-10 py-5 bg-white text-black rounded-full font-black uppercase tracking-tighter hover:scale-105 transition-transform shadow-2xl"
-                                >
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>
-                                    Jam Session starten
-                                </button>
+                                <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 z-20 flex gap-4">
+                                    <button 
+                                        onClick={startJam}
+                                        className="flex items-center gap-3 px-10 py-5 bg-white text-black rounded-full font-black uppercase tracking-tighter hover:scale-110 active:scale-95 transition-all shadow-2xl whitespace-nowrap"
+                                    >
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>
+                                        Jam starten
+                                    </button>
+                                </div>
                             </div>
 
-                            {/* Right Side: Track Info */}
-                            <div className="flex-grow space-y-12 text-center md:text-left">
+                            {/* Rechte Seite: Song Details */}
+                            <div className="flex-grow space-y-12 text-center lg:text-left w-full">
                                 <div className="space-y-4">
-                                    <div className="inline-block px-4 py-1.5 glass rounded-full text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 border border-white/5">
-                                        Aktuelle Wiedergabe
+                                    <div className="inline-flex items-center gap-3 px-5 py-2 glass rounded-full text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400 border border-white/5">
+                                        <span className="w-2 h-2 rounded-full animate-ping" style={{backgroundColor: settings.accentColor}}></span>
+                                        On Air
                                     </div>
-                                    <h1 className="text-8xl font-black italic uppercase tracking-tighter leading-[0.85]">{data.item.name}</h1>
-                                    <p className="text-4xl text-zinc-500 font-bold tracking-tight">{data.item.artists.map(a => a.name).join(", ")}</p>
+                                    <h1 className="text-huge font-black italic uppercase tracking-tighter">{data.item.name}</h1>
+                                    <p className="text-3xl md:text-5xl text-zinc-500 font-bold tracking-tight opacity-80">{data.item.artists.map(a => a.name).join(", ")}</p>
                                 </div>
 
-                                <div className="space-y-6">
-                                    <div className="w-full bg-zinc-900/40 h-4 rounded-full overflow-hidden border border-white/5 backdrop-blur-md">
+                                {/* Progress Section */}
+                                <div className="space-y-8 max-w-4xl">
+                                    <div className="relative w-full h-5 bg-white/5 rounded-full overflow-hidden border border-white/5 backdrop-blur-xl">
                                         <div 
-                                            className="h-full transition-all duration-1000 progress-glow" 
+                                            className="h-full transition-all duration-1000 progress-glow relative" 
                                             style={{ 
                                                 width: `${(data.progress_ms / data.item.duration_ms) * 100}%`,
-                                                backgroundColor: settings.accentColor
+                                                backgroundColor: settings.accentColor,
+                                                '--accent-color': settings.accentColor
                                             }}
-                                        ></div>
-                                    </div>
-                                    <div className="flex justify-between items-center px-2 font-black text-zinc-600 text-sm tracking-widest uppercase">
-                                        <span>{Math.floor(data.progress_ms / 60000)}:{String(Math.floor((data.progress_ms % 60000) / 1000)).padStart(2, '0')}</span>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-2 h-2 rounded-full animate-pulse" style={{backgroundColor: settings.accentColor}}></div>
-                                            <span className="text-[11px]">Stream aktiv</span>
+                                        >
+                                            <div className="absolute top-0 right-0 bottom-0 w-32 bg-gradient-to-l from-white/30 to-transparent"></div>
                                         </div>
+                                    </div>
+                                    <div className="flex justify-between items-center px-2 font-black text-zinc-600 text-sm md:text-lg tracking-[0.3em] uppercase">
+                                        <span>{Math.floor(data.progress_ms / 60000)}:{String(Math.floor((data.progress_ms % 60000) / 1000)).padStart(2, '0')}</span>
+                                        <span className="text-[10px] opacity-30">{data.item.album.name}</span>
                                         <span>{Math.floor(data.item.duration_ms / 60000)}:{String(Math.floor((data.item.duration_ms % 60000) / 1000)).padStart(2, '0')}</span>
                                     </div>
                                 </div>
 
-                                <div className="pt-10 border-t border-white/5 flex items-center justify-between">
-                                    <div className="flex items-center gap-6">
-                                        <div className="w-16 h-16 glass rounded-2xl flex items-center justify-center text-zinc-500 border border-white/10 shadow-lg">
-                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M7 7h.01M17 7h.01M7 17h.01M17 17h.01"/><path d="M12 7h.01M7 12h.01M17 12h.01M12 17h.01"/></svg>
+                                {/* Footer: Device & Invite */}
+                                <div className="pt-16 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-10">
+                                    <div className="flex items-center gap-8">
+                                        <div className="w-20 h-20 glass rounded-3xl flex items-center justify-center text-zinc-500 border border-white/10 shadow-xl group hover:border-white/20 transition-all">
+                                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="group-hover:scale-110 transition-transform"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M7 7h.01M17 7h.01M7 17h.01M17 17h.01"/><path d="M12 7h.01M7 12h.01M17 12h.01M12 17h.01"/></svg>
                                         </div>
-                                        <div>
-                                            <p className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-1">Invite friends</p>
-                                            <p className="text-lg font-bold text-zinc-200">Scan to join Jam</p>
+                                        <div className="text-left">
+                                            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-1">Invite Party</p>
+                                            <p className="text-xl font-black text-white/90">Scan to join Jam</p>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                         <p className="text-[10px] font-black text-zinc-700 uppercase tracking-[0.3em]">Device</p>
-                                         <p className="text-xs font-bold text-zinc-500">{data.device?.name || "Spotify Connect"}</p>
+                                    <div className="text-center md:text-right">
+                                         <p className="text-[10px] font-black text-zinc-700 uppercase tracking-[0.5em] mb-2">Active Output</p>
+                                         <p className="text-sm font-bold text-zinc-400 flex items-center justify-center md:justify-end gap-2">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 6.5a9.75 9.75 0 0 1 0 11"/><path d="M15 4.5a13.75 13.75 0 0 1 0 15"/><path d="M18 2.5a17.75 17.75 0 0 1 0 19"/><rect x="2" y="8" width="6" height="8" rx="2"/></svg>
+                                            {data.device?.name || "Spotify Connect"}
+                                         </p>
                                     </div>
                                 </div>
                             </div>
