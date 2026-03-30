@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jam Canvas OS - v1.6.0 (Custom Docks)</title>
+    <title>Jam Canvas OS - v1.6.1 (Auth Fix)</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -89,7 +89,7 @@
 
         const CLIENT_ID = "4a1a9ff821ca4ea2a00f9f665dab598b"; 
         const REDIRECT_URI = "https://julian4-spot.github.io/jam-dashboard/";
-        const VERSION = "v1.6.0";
+        const VERSION = "v1.6.1";
 
         function App() {
             const [token, setToken] = useState(window.localStorage.getItem("spotify_token") || "");
@@ -109,14 +109,22 @@
 
             useEffect(() => {
                 const hash = window.location.hash;
+                const urlParams = new URLSearchParams(window.location.search);
+                const code = urlParams.get('code');
+
+                // Support for Implicit Grant (Token in Hash)
                 if (hash) {
                     const t = new URLSearchParams(hash.substring(1)).get("access_token");
                     if(t) { 
                         setToken(t); 
                         window.localStorage.setItem("spotify_token", t); 
+                        window.history.replaceState({}, document.title, window.location.pathname);
                     }
-                    window.history.replaceState({}, document.title, window.location.pathname);
                 }
+                
+                // Note: Auth Code flow (response_type=code) usually requires a backend 
+                // to exchange the code for a token. If you just need access in frontend, 
+                // "token" is normally used, but here we update the login call as requested.
             }, []);
 
             useEffect(() => {
@@ -137,6 +145,11 @@
                             const qData = await queueRes.json();
                             setQueue(qData.queue || []);
                         }
+                        if (playerRes.status === 401) {
+                            // Token expired
+                            setToken("");
+                            window.localStorage.removeItem("spotify_token");
+                        }
                     } catch (e) { console.error(e); }
                 };
 
@@ -147,7 +160,8 @@
 
             const login = () => {
                 const scopes = "user-read-currently-playing user-read-playback-state user-read-playback-position";
-                window.location.href=`https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}`;
+                // Changed response_type to code as requested
+                window.location.href=`https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}`;
             };
 
             const moveDock = (index, direction) => {
@@ -164,9 +178,10 @@
                 return (
                     <div className="h-screen flex items-center justify-center bg-black">
                         <div className="text-center">
-                            <h1 className="text-4xl font-black italic mb-8 tracking-tighter">JAM CANVAS</h1>
+                            <h1 className="text-4xl font-black italic mb-8 tracking-tighter uppercase">Jam Monitor</h1>
+                            <p className="text-zinc-500 mb-8 text-sm font-bold tracking-widest uppercase">Viewer Edition</p>
                             <button onClick={login} className="bg-white text-black px-10 py-4 rounded-full font-black hover:invert transition-all">
-                                DASHBOARD AKTIVIEREN
+                                JETZT ANMELDEN
                             </button>
                         </div>
                     </div>
