@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jam Dashboard - Creative Edition v3.1.0</title>
+    <title>Jam Dashboard - Creative Edition v3.2.0</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -159,8 +159,8 @@
                 .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
         };
 
-        // QR Code Component to avoid ref issues on unmount/mount
-        const CommonQR = ({ size = "w-24", url }) => {
+        // QR Code Component - Jetzt mit eckigen Kanten und "Quiet Zone"
+        const CommonQR = ({ size = "w-32", url }) => {
             const localRef = useRef(null);
             
             useEffect(() => {
@@ -170,7 +170,8 @@
                         new QRCode(localRef.current, {
                             text: url || "https://spotify.com", 
                             width: 256, height: 256,
-                            colorDark: "#000000", colorLight: "#ffffff"
+                            colorDark: "#000000", colorLight: "#ffffff",
+                            correctLevel : QRCode.CorrectLevel.M // Medium Error Correction für bessere Lesbarkeit
                         });
                     } catch (e) {
                         console.error("QR Error", e);
@@ -179,8 +180,11 @@
             }, [url]);
 
             return (
-                <div className={`${size} glass p-2 rounded-2xl relative qr-wrapper flex-shrink-0`}>
-                    <div ref={localRef} className="rounded-xl overflow-hidden bg-white aspect-square w-full flex items-center justify-center"></div>
+                <div className={`${size} bg-black/40 backdrop-blur-xl p-3 rounded-xl relative qr-wrapper flex-shrink-0 border border-white/20 shadow-2xl`}>
+                    {/* Der innere Container hat jetzt nur noch leicht abgerundete Ecken und ein weißes Padding (Quiet Zone) */}
+                    <div className="bg-white p-2 rounded-md w-full aspect-square flex items-center justify-center">
+                        <div ref={localRef} className="w-full h-full"></div>
+                    </div>
                 </div>
             );
         };
@@ -191,7 +195,7 @@
             const [queue, setQueue] = useState([]);
             const [layout, setLayout] = useState("split"); 
             const [jamUrl, setJamUrl] = useState(window.localStorage.getItem("jam_url") || "");
-            const [isLoading, setIsLoading] = useState(!!token); // Loading state
+            const [isLoading, setIsLoading] = useState(!!token); 
 
             // Handle Login Callback
             useEffect(() => {
@@ -238,7 +242,6 @@
                         if (playerRes.status === 200) {
                             setData(await playerRes.json());
                         } else if (playerRes.status === 204) {
-                            // 204 means nothing is playing right now
                             setData(null); 
                         } else if (playerRes.status === 401) {
                             handleLogout();
@@ -283,7 +286,6 @@
                 window.location.href = window.location.pathname;
             };
 
-            // Login Screen if no token
             if (!token) {
                 return (
                     <div className="h-screen w-screen flex flex-col items-center justify-center bg-zinc-950 text-white relative overflow-hidden">
@@ -299,7 +301,6 @@
             }
 
             const renderLayout = () => {
-                // Loading State
                 if (isLoading) {
                     return (
                         <div className="flex-grow flex flex-col items-center justify-center text-white/30 uppercase tracking-[1em] font-bold">
@@ -309,7 +310,6 @@
                     );
                 }
 
-                // Idle/Not Playing State
                 if (!data?.item) {
                     return (
                         <div className="flex-grow flex flex-col items-center justify-center text-white/40 text-center space-y-6">
@@ -349,7 +349,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div className="w-[400px] shrink-0 flex flex-col gap-8">
+                                <div className="w-[450px] shrink-0 flex flex-col gap-8">
                                     <div className="glass p-8 rounded-[2.5rem] flex-grow flex flex-col overflow-hidden">
                                         <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 mb-8">Warteschlange</h3>
                                         <div className="flex-grow overflow-y-auto no-scrollbar space-y-6">
@@ -361,9 +361,9 @@
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="glass p-8 rounded-[2.5rem] flex items-center justify-between">
+                                    <div className="glass p-8 rounded-[2.5rem] flex items-center justify-between gap-6">
                                         <div><p className="text-[10px] font-black uppercase text-white/40 mb-1">Beitreten</p><p className="text-xl font-black uppercase tracking-tighter">Spotify Jam</p></div>
-                                        <CommonQR size="w-20" url={jamUrl} />
+                                        <CommonQR size="w-32" url={jamUrl} />
                                     </div>
                                 </div>
                             </div>
@@ -386,7 +386,7 @@
                                     <div className="mt-20 p-6 glass rounded-2xl border border-[#1DB954]/20 inline-block">
                                         <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#1DB954] flex items-center gap-3">
                                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                                            Die offizielle Spotify API gibt keine echten Liedtexte aus. Dies ist ein Layout-Mockup.
+                                            Spotify gibt über die API leider keine Songtexte heraus.
                                         </p>
                                     </div>
                                 </div>
@@ -397,11 +397,11 @@
                             <div className="flex-grow grid grid-cols-2">
                                 <div className="relative flex items-center justify-center border-r border-white/5 overflow-hidden">
                                     {imageUrl && <img src={imageUrl} className="absolute inset-0 w-full h-full object-cover opacity-40 scale-110 blur-xl" />}
-                                    <div className="relative z-10 flex flex-col items-center">
-                                        {imageUrl && <img src={imageUrl} className="w-3/4 max-w-md rounded-2xl shadow-2xl mb-10" />}
-                                        <div className="text-center px-10">
-                                            <h1 className="text-6xl font-black italic uppercase tracking-tighter mb-4">{track.name}</h1>
-                                            <p className="text-2xl font-medium text-white/60 uppercase">{track.artists[0].name}</p>
+                                    <div className="relative z-10 flex flex-col items-center w-full px-12">
+                                        {imageUrl && <img src={imageUrl} className="w-3/4 max-w-[28rem] rounded-2xl shadow-2xl mb-10" />}
+                                        <div className="text-center w-full">
+                                            <h1 className="text-5xl font-black italic uppercase tracking-tighter mb-4 truncate">{track.name}</h1>
+                                            <p className="text-2xl font-medium text-white/60 uppercase truncate">{track.artists[0].name}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -409,7 +409,7 @@
                                     <h2 className="text-[12px] font-black uppercase tracking-[0.5em] text-[#1DB954] mb-12">Warteschlange</h2>
                                     <div className="flex-grow space-y-10 overflow-y-auto no-scrollbar">
                                         {safeQueue.length === 0 && <p className="text-white/30 italic">Warteschlange ist leer...</p>}
-                                        {safeQueue.slice(0, 6).map((t, i) => (
+                                        {safeQueue.slice(0, 5).map((t, i) => (
                                             <div key={i} className="flex items-center justify-between group">
                                                 <div className="flex items-center gap-6">
                                                     <span className="text-2xl font-black text-white/10 w-6 text-center">{i+1}</span>
@@ -422,12 +422,12 @@
                                             </div>
                                         ))}
                                     </div>
-                                    <div className="mt-12 pt-12 border-t border-white/10 flex items-center justify-between">
+                                    <div className="mt-10 pt-10 border-t border-white/10 flex items-center justify-between gap-8">
                                         <div>
-                                            <p className="text-lg font-black uppercase tracking-widest mb-1">Party beitreten</p>
-                                            <p className="text-[11px] font-bold text-white/40 uppercase tracking-widest">Code scannen um Songs hinzuzufügen</p>
+                                            <p className="text-2xl font-black uppercase tracking-widest mb-2">Party beitreten</p>
+                                            <p className="text-xs font-bold text-white/40 uppercase tracking-widest leading-relaxed">Code scannen um<br/>Songs hinzuzufügen</p>
                                         </div>
-                                        <CommonQR size="w-20" url={jamUrl} />
+                                        <CommonQR size="w-40" url={jamUrl} />
                                     </div>
                                 </div>
                             </div>
@@ -442,14 +442,14 @@
                                     </div>
                                     <div className="absolute top-1/2 left-[95%] w-48 h-2 bg-zinc-800 origin-left -rotate-45 ml-4 rounded-full shadow-2xl"></div>
                                 </div>
-                                <div className="max-w-xl space-y-12">
+                                <div className="max-w-xl space-y-12 w-full">
                                     <div className="space-y-4">
                                         <p className="text-[12px] font-black uppercase tracking-[1em] text-[#1DB954]">Now Spinning</p>
-                                        <h1 className="text-[6rem] font-black italic uppercase tracking-tighter leading-[0.85]">{track.name}</h1>
+                                        <h1 className="text-[5rem] font-black italic uppercase tracking-tighter leading-[0.85]">{track.name}</h1>
                                         <p className="text-4xl font-bold text-white/40 italic">{track.artists[0].name}</p>
                                     </div>
                                     <div className="flex items-center gap-10 bg-white/5 p-6 rounded-3xl backdrop-blur-xl border border-white/10">
-                                        <CommonQR size="w-28" url={jamUrl} />
+                                        <CommonQR size="w-36" url={jamUrl} />
                                         <div className="space-y-4 flex-grow">
                                             <p className="text-[11px] font-bold text-white/40 uppercase tracking-[0.4em]">Plattennadel bei {Math.floor(progress)}%</p>
                                             <div className="h-1.5 bg-black/50 rounded-full overflow-hidden"><div className="h-full bg-white" style={{width: `${progress}%`}}></div></div>
@@ -461,7 +461,7 @@
                     case "social":
                         return (
                             <div className="flex-grow flex flex-col p-12 gap-8">
-                                <div className="flex items-center justify-between bg-black/40 p-6 rounded-[2rem] backdrop-blur-xl border border-white/5">
+                                <div className="flex items-center justify-between bg-black/40 p-6 px-10 rounded-[2rem] backdrop-blur-xl border border-white/5">
                                     <div className="flex items-center gap-6">
                                         <div className="w-14 h-14 bg-[#1DB954]/20 rounded-full flex items-center justify-center">
                                             <img src="Logo.svg" className="w-8 h-8 opacity-80" />
@@ -474,7 +474,10 @@
                                             </p>
                                         </div>
                                     </div>
-                                    <CommonQR size="w-16" url={jamUrl} />
+                                    <div className="flex items-center gap-6">
+                                        <p className="text-xs font-bold text-white/40 uppercase tracking-widest text-right">Jetzt<br/>Mitmachen</p>
+                                        <CommonQR size="w-28" url={jamUrl} />
+                                    </div>
                                 </div>
                                 <div className="flex-grow grid grid-cols-3 gap-8">
                                     <div className="col-span-2 glass rounded-[3rem] p-16 flex flex-col justify-end relative overflow-hidden">
@@ -520,14 +523,14 @@
                                     </div>
                                     <div className="flex items-end justify-between">
                                         <div className="w-1/2 h-[2px] bg-white/10 relative"><div className="absolute top-0 left-0 h-[4px] -top-[1px] bg-white shadow-[0_0_30px_#fff]" style={{width: `${progress}%`}}></div></div>
-                                        <div className="flex gap-16 items-center bg-black/40 p-8 rounded-[3rem] backdrop-blur-xl border border-white/10">
+                                        <div className="flex gap-12 items-center bg-black/60 p-6 pl-10 rounded-[2.5rem] backdrop-blur-2xl border border-white/10">
                                             <div className="text-right">
                                                 <p className="text-[11px] font-black uppercase tracking-[0.6em] text-white/40 mb-3">Als Nächstes</p>
-                                                <p className="text-2xl font-bold uppercase italic">{safeQueue[0]?.name || 'Nichts geplant'}</p>
-                                                <p className="text-sm text-white/40 uppercase mt-1">{safeQueue[0]?.artists[0]?.name || ''}</p>
+                                                <p className="text-2xl font-bold uppercase italic max-w-[200px] truncate">{safeQueue[0]?.name || 'Nichts geplant'}</p>
+                                                <p className="text-sm text-white/40 uppercase mt-1 truncate max-w-[200px]">{safeQueue[0]?.artists[0]?.name || ''}</p>
                                             </div>
                                             <div className="w-[1px] h-16 bg-white/10"></div>
-                                            <CommonQR size="w-24" url={jamUrl} />
+                                            <CommonQR size="w-36" url={jamUrl} />
                                         </div>
                                     </div>
                                 </div>
