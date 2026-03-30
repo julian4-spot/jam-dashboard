@@ -3,81 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jam Canvas OS - v1.6.2 (Auth Fix & Redirect)</title>
+    <title>Jam Monitor - Auth Debug Version</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
-        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; user-select: none; }
-        
+        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; }
         .glass-card { 
-            background: rgba(255, 255, 255, 0.02); 
-            backdrop-filter: blur(50px); 
-            border: 1px solid rgba(255, 255, 255, 0.08); 
-            border-radius: 2rem;
-            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-            position: relative;
-        }
-
-        .glow-bg {
-            position: absolute; width: 100vw; height: 100vh;
-            filter: blur(180px); opacity: 0.4; z-index: -1;
-            transition: background 4s ease-in-out;
-        }
-
-        .widget-label { 
-            font-size: 9px; 
-            font-weight: 900; 
-            text-transform: uppercase; 
-            letter-spacing: 0.4em; 
-            color: rgba(255,255,255,0.25); 
-            margin-bottom: 1rem; 
-            display: block; 
-        }
-
-        .edit-mode-active {
-            border: 2px dashed rgba(255, 255, 255, 0.2) !important;
-            background: rgba(255, 255, 255, 0.05) !important;
-        }
-
-        .move-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .move-btn:hover { background: rgba(255, 255, 255, 0.3); }
-
-        .lyrics-line {
-            transition: all 0.5s ease;
-            filter: blur(1px);
-            opacity: 0.3;
-        }
-        
-        .lyrics-active {
-            color: white;
-            opacity: 1;
-            filter: blur(0px);
-            transform: scale(1.05) translateX(10px);
-        }
-
-        @keyframes scanline {
-            0% { transform: translateY(-100%); }
-            100% { transform: translateY(100%); }
-        }
-
-        .scanline {
-            width: 100%; height: 2px;
-            background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
-            animation: scanline 8s linear infinite;
+            background: rgba(255, 255, 255, 0.03); 
+            backdrop-filter: blur(40px); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            border-radius: 2.5rem;
         }
     </style>
 </head>
@@ -89,36 +27,29 @@
 
         const CLIENT_ID = "4a1a9ff821ca4ea2a00f9f665dab598b"; 
         const REDIRECT_URI = "https://julian4-spot.github.io/jam-dashboard/";
-        const VERSION = "v1.6.2";
 
         function App() {
             const [token, setToken] = useState(window.localStorage.getItem("spotify_token") || "");
-            const [data, setData] = useState(null);
-            const [queue, setQueue] = useState([]);
-            const [jamLink, setJamLink] = useState(window.localStorage.getItem("jam_link") || "");
-            const [showSettings, setShowSettings] = useState(false);
             const [error, setError] = useState("");
-            
-            const savedOrder = window.localStorage.getItem("dock_order");
-            const [layout, setLayout] = useState({
-                showLyrics: true,
-                showQR: true,
-                showNext: true,
-                accentColor: "#1DB954",
-                order: savedOrder ? JSON.parse(savedOrder) : ["main", "qr", "lyrics", "progress", "next"]
-            });
+            const [data, setData] = useState(null);
 
             useEffect(() => {
                 const hash = window.location.hash;
                 const urlParams = new URLSearchParams(window.location.search);
                 
-                // Falls ein "code" in der URL ist, weisen wir darauf hin, dass wir den Token-Flow brauchen
+                // 1. Prüfe auf Fehler-Parameter von Spotify
+                if (urlParams.get('error')) {
+                    setError(`Spotify Fehler: ${urlParams.get('error')}. Prüfe deine Redirect URIs.`);
+                }
+
+                // 2. Prüfe auf falschen Auth-Typ (Code statt Token)
                 if (urlParams.get('code')) {
-                    setError("Code-Modus erkannt. Bitte klicke erneut auf 'Anmelden' für den Token-Zugriff.");
+                    setError("Falscher Modus: Du musst im Spotify Dashboard 'Implicit Grant' aktivieren.");
+                    // Säubere URL von dem ungültigen Code
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }
 
-                // Implicit Grant Flow (Token direkt in der URL-Hash)
+                // 3. Verarbeite erfolgreichen Token (Implicit Grant)
                 if (hash) {
                     const params = new URLSearchParams(hash.substring(1));
                     const t = params.get("access_token");
@@ -133,237 +64,74 @@
 
             useEffect(() => {
                 if (!token) return;
-                const fetchSpotify = async () => {
+                const fetchData = async () => {
                     try {
-                        const [playerRes, queueRes] = await Promise.all([
-                            fetch("https://api.spotify.com/v1/me/player", {
-                                headers: { Authorization: `Bearer ${token}` }
-                            }),
-                            fetch("https://api.spotify.com/v1/me/player/queue", {
-                                headers: { Authorization: `Bearer ${token}` }
-                            })
-                        ]);
-
-                        if (playerRes.status === 200) setData(await playerRes.json());
-                        if (queueRes.status === 200) {
-                            const qData = await queueRes.json();
-                            setQueue(qData.queue || []);
-                        }
-                        if (playerRes.status === 401) {
+                        const res = await fetch("https://api.spotify.com/v1/me/player", {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        if (res.status === 200) setData(await res.json());
+                        if (res.status === 401) {
                             setToken("");
                             window.localStorage.removeItem("spotify_token");
                         }
-                    } catch (e) { console.error(e); }
+                    } catch (e) { console.error(res); }
                 };
-
-                fetchSpotify();
-                const interval = setInterval(fetchSpotify, 2000);
+                fetchData();
+                const interval = setInterval(fetchData, 3000);
                 return () => clearInterval(interval);
             }, [token]);
 
             const login = () => {
-                const scopes = "user-read-currently-playing user-read-playback-state user-read-playback-position";
-                // Wir MÜSSEN response_type=token nutzen, damit wir im Frontend direkt arbeiten können
-                window.location.href=`https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}`;
-            };
-
-            const moveDock = (index, direction) => {
-                const newOrder = [...layout.order];
-                const newIndex = index + direction;
-                if (newIndex >= 0 && newIndex < newOrder.length) {
-                    [newOrder[index], newOrder[newIndex]] = [newOrder[newIndex], newOrder[index]];
-                    setLayout({...layout, order: newOrder});
-                    window.localStorage.setItem("dock_order", JSON.stringify(newOrder));
-                }
+                const scopes = "user-read-currently-playing user-read-playback-state";
+                // Erzwinge Implicit Grant via response_type=token
+                const authUrl = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}&show_dialog=true`;
+                window.location.href = authUrl;
             };
 
             if (!token) {
                 return (
-                    <div className="h-screen flex items-center justify-center bg-black">
-                        <div className="text-center">
-                            <h1 className="text-4xl font-black italic mb-4 tracking-tighter uppercase">Jam Monitor</h1>
-                            <p className="text-zinc-500 mb-8 text-sm font-bold tracking-widest uppercase">Canvas Edition</p>
+                    <div className="h-screen flex items-center justify-center bg-black p-6">
+                        <div className="max-w-md w-full text-center">
+                            <h1 className="text-5xl font-black italic mb-2 tracking-tighter uppercase">Jam Monitor</h1>
+                            <p className="text-zinc-600 mb-10 text-xs font-bold tracking-[0.3em] uppercase">Auth Debugger</p>
                             
                             {error && (
-                                <div className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-xs font-bold uppercase">
+                                <div className="mb-8 p-6 bg-red-500/10 border border-red-500/20 rounded-3xl text-red-500 text-[10px] font-bold uppercase leading-relaxed">
+                                    <p className="mb-2 text-sm">⚠️ Fehler aufgetreten</p>
                                     {error}
                                 </div>
                             )}
 
-                            <button onClick={login} className="bg-white text-black px-10 py-4 rounded-full font-black hover:invert transition-all">
-                                JETZT ANMELDEN
-                            </button>
-                            
-                            <p className="mt-8 text-[10px] text-zinc-600 uppercase tracking-widest max-w-xs mx-auto leading-loose">
-                                Hinweis: Bitte stelle sicher, dass in deinem Spotify Dashboard "Implicit Grant" aktiviert ist.
-                            </p>
+                            <div className="space-y-4">
+                                <button onClick={login} className="w-full bg-white text-black py-5 rounded-full font-black hover:scale-105 transition-all text-sm uppercase">
+                                    Spotify Login versuchen
+                                </button>
+                                
+                                <div className="p-6 glass-card text-left space-y-4">
+                                    <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Checkliste für dich:</p>
+                                    <ul className="text-[11px] space-y-2 text-zinc-400 font-medium">
+                                        <li className="flex gap-2"><span>1.</span> <span>Redirect URI im Dashboard muss exakt sein: <br/><code className="text-white bg-white/5 p-1 rounded select-all">https://julian4-spot.github.io/jam-dashboard/</code></span></li>
+                                        <li className="flex gap-2"><span>2.</span> <span>In den App-Settings den Haken bei <b>"Implicit Grant"</b> setzen (Wichtig!).</span></li>
+                                        <li className="flex gap-2"><span>3.</span> <span>Speichern (Save) nicht vergessen.</span></li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 );
             }
 
-            const Widgets = {
-                main: (key, index) => (
-                    <div key={key} className={`col-span-12 lg:col-span-4 row-span-4 glass-card p-10 flex flex-col items-center justify-center text-center ${showSettings ? 'edit-mode-active' : ''}`}>
-                        {showSettings && (
-                            <div className="absolute top-4 right-4 flex gap-2">
-                                <button onClick={() => moveDock(index, -1)} className="move-btn">←</button>
-                                <button onClick={() => moveDock(index, 1)} className="move-btn">→</button>
-                            </div>
-                        )}
-                        <span className="widget-label">Now Playing</span>
-                        <div className="relative w-full mb-8">
-                            <img src={data?.item?.album?.images[0]?.url} className="w-full aspect-square rounded-[2rem] shadow-2xl border border-white/5 object-cover" />
-                        </div>
-                        <h1 className="text-4xl font-black italic uppercase tracking-tighter mb-2 truncate w-full">{data?.item?.name || "Warte..."}</h1>
-                        <p className="text-xl text-zinc-500 font-bold">{data?.item?.artists?.[0]?.name}</p>
-                    </div>
-                ),
-                qr: (key, index) => layout.showQR && (
-                    <div key={key} className={`col-span-12 lg:col-span-2 row-span-2 glass-card p-6 flex flex-col items-center justify-center ${showSettings ? 'edit-mode-active' : ''}`}>
-                         {showSettings && (
-                            <div className="absolute top-4 right-4 flex gap-2">
-                                <button onClick={() => moveDock(index, -1)} className="move-btn">←</button>
-                                <button onClick={() => moveDock(index, 1)} className="move-btn">→</button>
-                            </div>
-                        )}
-                        <span className="widget-label">Join Session</span>
-                        <div className="p-3 bg-white rounded-2xl mb-4">
-                            {jamLink ? (
-                                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(jamLink)}&color=000&bgcolor=fff`} className="w-24 h-24 mix-blend-multiply" />
-                            ) : (
-                                <div className="w-24 h-24 flex items-center justify-center text-black font-black text-[8px] text-center">LINK FEHLT</div>
-                            )}
-                        </div>
-                        <p className="text-[8px] font-black opacity-30 uppercase tracking-widest">Handy scannen</p>
-                    </div>
-                ),
-                lyrics: (key, index) => layout.showLyrics && (
-                    <div key={key} className={`col-span-12 lg:col-span-6 row-span-4 glass-card p-12 overflow-hidden relative ${showSettings ? 'edit-mode-active' : ''}`}>
-                         {showSettings && (
-                            <div className="absolute top-4 right-4 flex gap-2">
-                                <button onClick={() => moveDock(index, -1)} className="move-btn">←</button>
-                                <button onClick={() => moveDock(index, 1)} className="move-btn">→</button>
-                            </div>
-                        )}
-                        <span className="widget-label">Live Stream</span>
-                        <div className="scanline absolute top-0 left-0"></div>
-                        <div className="space-y-6 text-4xl font-black italic flex flex-col h-full justify-center">
-                            <p className="lyrics-line">Everything you hear</p>
-                            <p className="lyrics-line lyrics-active">{data?.item?.name || "Is part of the experience"}</p>
-                            <p className="lyrics-line">Visualized in real-time</p>
-                            <p className="lyrics-line">Enjoy the show</p>
-                        </div>
-                    </div>
-                ),
-                progress: (key, index) => (
-                    <div key={key} className={`col-span-12 lg:col-span-8 row-span-2 glass-card p-10 flex flex-col justify-center ${showSettings ? 'edit-mode-active' : ''}`}>
-                         {showSettings && (
-                            <div className="absolute top-4 right-4 flex gap-2">
-                                <button onClick={() => moveDock(index, -1)} className="move-btn">←</button>
-                                <button onClick={() => moveDock(index, 1)} className="move-btn">→</button>
-                            </div>
-                        )}
-                        <span className="widget-label">System Status</span>
-                        <div className="space-y-6">
-                            <div className="h-3 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                <div className="h-full transition-all duration-1000" style={{ width: `${(data?.progress_ms / data?.item?.duration_ms) * 100}%`, backgroundColor: layout.accentColor }}></div>
-                            </div>
-                            <div className="flex justify-between text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                                <span>{Math.floor(data?.progress_ms/60000)}:{String(Math.floor((data?.progress_ms%60000)/1000)).padStart(2, '0')}</span>
-                                <span className="text-white opacity-40 uppercase truncate max-w-[200px]">{data?.item?.album?.name}</span>
-                                <span>{Math.floor(data?.item?.duration_ms/60000)}:{String(Math.floor((data?.item?.duration_ms%60000)/1000)).padStart(2, '0')}</span>
-                            </div>
-                        </div>
-                    </div>
-                ),
-                next: (key, index) => layout.showNext && (
-                    <div key={key} className={`col-span-12 lg:col-span-4 row-span-2 glass-card p-8 ${showSettings ? 'edit-mode-active' : ''}`}>
-                         {showSettings && (
-                            <div className="absolute top-4 right-4 flex gap-2">
-                                <button onClick={() => moveDock(index, -1)} className="move-btn">←</button>
-                                <button onClick={() => moveDock(index, 1)} className="move-btn">→</button>
-                            </div>
-                        )}
-                        <span className="widget-label">Up Next</span>
-                        <div className="space-y-4">
-                            {queue.slice(0, 3).map((track, i) => (
-                                <div key={i} className="flex items-center gap-4 opacity-60">
-                                    <img src={track.album?.images[2]?.url} className="w-10 h-10 rounded-lg border border-white/10" />
-                                    <div className="truncate">
-                                        <div className="text-xs font-black italic uppercase truncate">{track.name}</div>
-                                        <div className="text-[9px] text-zinc-500 font-bold truncate uppercase">{track.artists[0].name}</div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )
-            };
-
             return (
-                <div className="h-screen w-full p-10 relative overflow-hidden flex flex-col gap-8">
-                    <div className="glow-bg" style={{ background: `radial-gradient(circle at 50% 50%, ${layout.accentColor} 0%, transparent 80%)` }}></div>
-                    
-                    {/* Header bar */}
-                    <div className="flex justify-between items-center z-20">
-                        <div className="flex items-center gap-4">
-                            <div className="text-xs font-black tracking-[0.5em] opacity-20 uppercase">Jam Monitor {VERSION}</div>
-                            {showSettings && (
-                                <input 
-                                    className="bg-white/5 border border-white/10 rounded-full px-6 py-2 text-xs outline-none focus:border-white/20 w-64 font-bold"
-                                    placeholder="Jam Link hier einfügen..."
-                                    value={jamLink}
-                                    onChange={(e) => {setJamLink(e.target.value); window.localStorage.setItem("jam_link", e.target.value);}}
-                                />
-                            )}
-                        </div>
-                        <button onClick={() => setShowSettings(!showSettings)} className="w-12 h-12 glass-card flex items-center justify-center hover:bg-white/5 border-none">
-                            {showSettings ? "✕" : "⚙️"}
-                        </button>
+                <div className="h-screen flex items-center justify-center bg-black">
+                    <div className="text-center animate-pulse">
+                        <p className="text-zinc-500 font-black uppercase tracking-[0.5em] text-xs">Verbunden!</p>
+                        <h2 className="text-2xl font-bold mt-4">{data?.item?.name || "Lade Song-Daten..."}</h2>
+                        <button onClick={() => {setToken(""); window.localStorage.clear(); window.location.reload();}} className="mt-10 text-zinc-700 text-[10px] font-bold uppercase tracking-widest hover:text-white">Logout</button>
                     </div>
-
-                    {/* Dashboard Workspace */}
-                    <div className="flex-grow grid grid-cols-12 grid-rows-6 gap-6 z-10">
-                        {layout.order.map((key, index) => Widgets[key](key, index))}
-                    </div>
-
-                    {/* Settings Sidebar */}
-                    {showSettings && (
-                        <div className="absolute right-0 top-0 h-full w-80 glass-card rounded-none border-l border-white/10 p-10 z-[100] animate-in slide-in-from-right duration-500">
-                            <div className="flex justify-between items-center mb-10">
-                                <h2 className="text-2xl font-black italic uppercase tracking-tighter">Edit Docks</h2>
-                                <button onClick={() => setShowSettings(false)} className="text-[9px] opacity-30 font-black uppercase">Fertig</button>
-                            </div>
-                            <div className="space-y-8">
-                                <div className="space-y-4">
-                                    <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Sichtbarkeit</p>
-                                    {["Lyrics", "QR", "Next"].map(item => (
-                                        <div key={item} className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
-                                            <span className="text-xs font-bold">{item} Dock</span>
-                                            <input 
-                                                type="checkbox" 
-                                                checked={layout[`show${item}`]} 
-                                                onChange={e => setLayout({...layout, [`show${item}`]: e.target.checked})} 
-                                                className="accent-white" 
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="space-y-4">
-                                    <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Accent Color</p>
-                                    <input type="color" value={layout.accentColor} onChange={e => setLayout({...layout, accentColor: e.target.value})} className="w-full bg-transparent h-10 rounded cursor-pointer" />
-                                </div>
-                                <div className="pt-8 border-t border-white/5">
-                                    <button onClick={() => {window.localStorage.removeItem("dock_order"); window.location.reload();}} className="w-full py-4 text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 transition-all">Layout zurücksetzen</button>
-                                    <button onClick={() => {window.localStorage.clear(); window.location.reload();}} className="w-full py-4 text-red-500 text-[10px] font-black uppercase tracking-widest border border-red-500/20 rounded-xl mt-4">Reset Session</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             );
         }
+
         ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
