@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jam Dashboard - v1.6.2</title>
+    <title>Jam Dashboard - v1.6.3</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -110,10 +110,10 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // Deine aktuelle Client ID aus dem Spotify Dashboard
+        // Aktualisierte Client ID von deinem Spotify Dashboard
         const CLIENT_ID = "52f166f3b18a4aee8d2a91649a371134"; 
         const REDIRECT_URI = "https://julian4-spot.github.io/jam-dashboard/";
-        const VERSION = "v1.6.2";
+        const VERSION = "v1.6.3";
 
         function App() {
             const [token, setToken] = useState(window.localStorage.getItem("spotify_token") || "");
@@ -159,8 +159,13 @@
 
             const login = () => {
                 const scopes = "user-read-currently-playing user-read-playback-state";
-                // Nutze response_type=token für direkten Zugriff
-                window.location.href = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}&show_dialog=true`;
+                
+                // Wir erzwingen hier den Implicit Grant Flow (response_type=token)
+                // Falls Spotify immer noch "must be code" sagt, musst du im Dashboard 
+                // unter "Settings" -> "User Management" schauen, ob dort "Implicit Grant" aktiviert werden kann.
+                const authUrl = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}&show_dialog=true`;
+                
+                window.location.href = authUrl;
             };
 
             if (!token) {
