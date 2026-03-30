@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jam Monitor - v1.6.2 (Ready)</title>
+    <title>Jam Dashboard - v1.6.2</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -110,8 +110,8 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // Sobald du wieder Zugriff hast oder einen Zweit-Account nutzt, trage hier die ID ein:
-        const CLIENT_ID = "4a1a9ff821ca4ea2a00f9f665dab598b"; 
+        // Deine aktuelle Client ID aus dem Spotify Dashboard
+        const CLIENT_ID = "52f166f3b18a4aee8d2a91649a371134"; 
         const REDIRECT_URI = "https://julian4-spot.github.io/jam-dashboard/";
         const VERSION = "v1.6.2";
 
@@ -148,7 +148,7 @@
                             window.localStorage.removeItem("spotify_token");
                         }
                     } catch (e) {
-                        console.error("API Error", e);
+                        console.error("API Signal Error", e);
                     }
                 };
 
@@ -159,6 +159,7 @@
 
             const login = () => {
                 const scopes = "user-read-currently-playing user-read-playback-state";
+                // Nutze response_type=token für direkten Zugriff
                 window.location.href = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}&show_dialog=true`;
             };
 
@@ -167,7 +168,7 @@
                     <div className="main-container">
                         <div className="scanline"></div>
                         <div className="text-center z-10 px-6">
-                            <h1 className="text-6xl font-black italic tracking-tighter uppercase mb-2 text-glow">Jam Monitor</h1>
+                            <h1 className="text-6xl font-black italic tracking-tighter uppercase mb-2 text-glow">Jam Dashboard</h1>
                             <p className="text-zinc-700 font-bold tracking-[0.5em] uppercase text-[9px] mb-20 italic">Dashboard System {VERSION}</p>
                             <button onClick={login} className="login-btn shadow-2xl">
                                 Spotify verbinden
