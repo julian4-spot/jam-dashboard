@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jam Canvas OS - v1.5.0 (Viewer Edition)</title>
+    <title>Jam Canvas OS - v1.6.0 (Custom Docks)</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -37,6 +37,25 @@
             display: block; 
         }
 
+        .edit-mode-active {
+            border: 2px dashed rgba(255, 255, 255, 0.2) !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        .move-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .move-btn:hover { background: rgba(255, 255, 255, 0.3); }
+
         .lyrics-line {
             transition: all 0.5s ease;
             filter: blur(1px);
@@ -60,10 +79,6 @@
             background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
             animation: scanline 8s linear infinite;
         }
-
-        .drag-handle {
-            cursor: move;
-        }
     </style>
 </head>
 <body>
@@ -74,7 +89,7 @@
 
         const CLIENT_ID = "4a1a9ff821ca4ea2a00f9f665dab598b"; 
         const REDIRECT_URI = "https://julian4-spot.github.io/jam-dashboard/";
-        const VERSION = "v1.5.0";
+        const VERSION = "v1.6.0";
 
         function App() {
             const [token, setToken] = useState(window.localStorage.getItem("spotify_token") || "");
@@ -83,13 +98,13 @@
             const [jamLink, setJamLink] = useState(window.localStorage.getItem("jam_link") || "");
             const [showSettings, setShowSettings] = useState(false);
             
-            // Layout Status (Positionen der Docks)
+            const savedOrder = window.localStorage.getItem("dock_order");
             const [layout, setLayout] = useState({
                 showLyrics: true,
                 showQR: true,
                 showNext: true,
                 accentColor: "#1DB954",
-                order: ["main", "qr", "lyrics", "progress", "next"]
+                order: savedOrder ? JSON.parse(savedOrder) : ["main", "qr", "lyrics", "progress", "next"]
             });
 
             useEffect(() => {
@@ -135,6 +150,16 @@
                 window.location.href=`https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}`;
             };
 
+            const moveDock = (index, direction) => {
+                const newOrder = [...layout.order];
+                const newIndex = index + direction;
+                if (newIndex >= 0 && newIndex < newOrder.length) {
+                    [newOrder[index], newOrder[newIndex]] = [newOrder[newIndex], newOrder[index]];
+                    setLayout({...layout, order: newOrder});
+                    window.localStorage.setItem("dock_order", JSON.stringify(newOrder));
+                }
+            };
+
             if (!token) {
                 return (
                     <div className="h-screen flex items-center justify-center bg-black">
@@ -148,10 +173,15 @@
                 );
             }
 
-            // Widgets als Komponenten für einfaches Reordering
             const Widgets = {
-                main: (
-                    <div key="main" className="col-span-12 lg:col-span-4 row-span-4 glass-card p-10 flex flex-col items-center justify-center text-center">
+                main: (key, index) => (
+                    <div key={key} className={`col-span-12 lg:col-span-4 row-span-4 glass-card p-10 flex flex-col items-center justify-center text-center ${showSettings ? 'edit-mode-active' : ''}`}>
+                        {showSettings && (
+                            <div className="absolute top-4 right-4 flex gap-2">
+                                <button onClick={() => moveDock(index, -1)} className="move-btn">←</button>
+                                <button onClick={() => moveDock(index, 1)} className="move-btn">→</button>
+                            </div>
+                        )}
                         <span className="widget-label">Now Playing</span>
                         <div className="relative w-full mb-8">
                             <img src={data?.item?.album?.images[0]?.url} className="w-full aspect-square rounded-[2rem] shadow-2xl border border-white/5 object-cover" />
@@ -160,8 +190,14 @@
                         <p className="text-xl text-zinc-500 font-bold">{data?.item?.artists?.[0]?.name}</p>
                     </div>
                 ),
-                qr: layout.showQR && (
-                    <div key="qr" className="col-span-12 lg:col-span-2 row-span-2 glass-card p-6 flex flex-col items-center justify-center">
+                qr: (key, index) => layout.showQR && (
+                    <div key={key} className={`col-span-12 lg:col-span-2 row-span-2 glass-card p-6 flex flex-col items-center justify-center ${showSettings ? 'edit-mode-active' : ''}`}>
+                         {showSettings && (
+                            <div className="absolute top-4 right-4 flex gap-2">
+                                <button onClick={() => moveDock(index, -1)} className="move-btn">←</button>
+                                <button onClick={() => moveDock(index, 1)} className="move-btn">→</button>
+                            </div>
+                        )}
                         <span className="widget-label">Join Session</span>
                         <div className="p-3 bg-white rounded-2xl mb-4">
                             {jamLink ? (
@@ -173,20 +209,32 @@
                         <p className="text-[8px] font-black opacity-30 uppercase tracking-widest">Handy scannen</p>
                     </div>
                 ),
-                lyrics: layout.showLyrics && (
-                    <div key="lyrics" className="col-span-12 lg:col-span-6 row-span-4 glass-card p-12 overflow-hidden relative">
+                lyrics: (key, index) => layout.showLyrics && (
+                    <div key={key} className={`col-span-12 lg:col-span-6 row-span-4 glass-card p-12 overflow-hidden relative ${showSettings ? 'edit-mode-active' : ''}`}>
+                         {showSettings && (
+                            <div className="absolute top-4 right-4 flex gap-2">
+                                <button onClick={() => moveDock(index, -1)} className="move-btn">←</button>
+                                <button onClick={() => moveDock(index, 1)} className="move-btn">→</button>
+                            </div>
+                        )}
                         <span className="widget-label">Live Stream</span>
                         <div className="scanline absolute top-0 left-0"></div>
                         <div className="space-y-6 text-4xl font-black italic flex flex-col h-full justify-center">
                             <p className="lyrics-line">Everything you hear</p>
-                            <p className="lyrics-line lyrics-active">Is part of the experience</p>
+                            <p className="lyrics-line lyrics-active">{data?.item?.name || "Is part of the experience"}</p>
                             <p className="lyrics-line">Visualized in real-time</p>
                             <p className="lyrics-line">Enjoy the show</p>
                         </div>
                     </div>
                 ),
-                progress: (
-                    <div key="progress" className="col-span-12 lg:col-span-8 row-span-2 glass-card p-10 flex flex-col justify-center">
+                progress: (key, index) => (
+                    <div key={key} className={`col-span-12 lg:col-span-8 row-span-2 glass-card p-10 flex flex-col justify-center ${showSettings ? 'edit-mode-active' : ''}`}>
+                         {showSettings && (
+                            <div className="absolute top-4 right-4 flex gap-2">
+                                <button onClick={() => moveDock(index, -1)} className="move-btn">←</button>
+                                <button onClick={() => moveDock(index, 1)} className="move-btn">→</button>
+                            </div>
+                        )}
                         <span className="widget-label">System Status</span>
                         <div className="space-y-6">
                             <div className="h-3 bg-white/5 rounded-full overflow-hidden border border-white/5">
@@ -194,14 +242,20 @@
                             </div>
                             <div className="flex justify-between text-[10px] font-black text-zinc-500 uppercase tracking-widest">
                                 <span>{Math.floor(data?.progress_ms/60000)}:{String(Math.floor((data?.progress_ms%60000)/1000)).padStart(2, '0')}</span>
-                                <span className="text-white opacity-40">{data?.item?.album?.name}</span>
+                                <span className="text-white opacity-40 uppercase truncate max-w-[200px]">{data?.item?.album?.name}</span>
                                 <span>{Math.floor(data?.item?.duration_ms/60000)}:{String(Math.floor((data?.item?.duration_ms%60000)/1000)).padStart(2, '0')}</span>
                             </div>
                         </div>
                     </div>
                 ),
-                next: layout.showNext && (
-                    <div key="next" className="col-span-12 lg:col-span-4 row-span-2 glass-card p-8">
+                next: (key, index) => layout.showNext && (
+                    <div key={key} className={`col-span-12 lg:col-span-4 row-span-2 glass-card p-8 ${showSettings ? 'edit-mode-active' : ''}`}>
+                         {showSettings && (
+                            <div className="absolute top-4 right-4 flex gap-2">
+                                <button onClick={() => moveDock(index, -1)} className="move-btn">←</button>
+                                <button onClick={() => moveDock(index, 1)} className="move-btn">→</button>
+                            </div>
+                        )}
                         <span className="widget-label">Up Next</span>
                         <div className="space-y-4">
                             {queue.slice(0, 3).map((track, i) => (
@@ -222,7 +276,7 @@
                 <div className="h-screen w-full p-10 relative overflow-hidden flex flex-col gap-8">
                     <div className="glow-bg" style={{ background: `radial-gradient(circle at 50% 50%, ${layout.accentColor} 0%, transparent 80%)` }}></div>
                     
-                    {/* Header bar (Nur Info, keine Steuerung) */}
+                    {/* Header bar */}
                     <div className="flex justify-between items-center z-20">
                         <div className="flex items-center gap-4">
                             <div className="text-xs font-black tracking-[0.5em] opacity-20 uppercase">Jam Monitor {VERSION}</div>
@@ -242,13 +296,16 @@
 
                     {/* Dashboard Workspace */}
                     <div className="flex-grow grid grid-cols-12 grid-rows-6 gap-6 z-10">
-                        {layout.order.map(key => Widgets[key])}
+                        {layout.order.map((key, index) => Widgets[key](key, index))}
                     </div>
 
                     {/* Settings Sidebar */}
                     {showSettings && (
                         <div className="absolute right-0 top-0 h-full w-80 glass-card rounded-none border-l border-white/10 p-10 z-[100] animate-in slide-in-from-right duration-500">
-                            <h2 className="text-2xl font-black italic mb-10 uppercase tracking-tighter">Docks Anpassen</h2>
+                            <div className="flex justify-between items-center mb-10">
+                                <h2 className="text-2xl font-black italic uppercase tracking-tighter">Edit Docks</h2>
+                                <button onClick={() => setShowSettings(false)} className="text-[9px] opacity-30 font-black uppercase">Fertig</button>
+                            </div>
                             <div className="space-y-8">
                                 <div className="space-y-4">
                                     <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Sichtbarkeit</p>
@@ -269,8 +326,8 @@
                                     <input type="color" value={layout.accentColor} onChange={e => setLayout({...layout, accentColor: e.target.value})} className="w-full bg-transparent h-10 rounded cursor-pointer" />
                                 </div>
                                 <div className="pt-8 border-t border-white/5">
-                                    <p className="text-[9px] text-zinc-600 mb-4">Im Viewer-Modus ist die Steuerung deaktiviert.</p>
-                                    <button onClick={() => {window.localStorage.clear(); window.location.reload();}} className="w-full py-4 text-red-500 text-[10px] font-black uppercase tracking-widest border border-red-500/20 rounded-xl">Reset Session</button>
+                                    <button onClick={() => {window.localStorage.removeItem("dock_order"); window.location.reload();}} className="w-full py-4 text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 transition-all">Layout zurücksetzen</button>
+                                    <button onClick={() => {window.localStorage.clear(); window.location.reload();}} className="w-full py-4 text-red-500 text-[10px] font-black uppercase tracking-widest border border-red-500/20 rounded-xl mt-4">Reset Session</button>
                                 </div>
                             </div>
                         </div>
