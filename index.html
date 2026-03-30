@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jam Dashboard - Creative Edition v3.2.0</title>
+    <title>Jam Dashboard - v4.5</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -31,14 +31,14 @@
             inset: -5%;
             background-size: cover;
             background-position: center;
-            filter: brightness(0.3) saturate(1.4) blur(40px);
+            filter: brightness(0.2) saturate(1.2) blur(60px);
             transition: background-image 2s ease-in-out;
         }
 
         .overlay-vignette {
             position: absolute;
             inset: 0;
-            background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.85) 100%);
+            background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.95) 100%);
         }
 
         .app-container {
@@ -56,22 +56,24 @@
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
+        /* Das Dock */
         .system-dock {
             position: fixed;
-            bottom: -120px;
+            bottom: -220px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(10, 10, 10, 0.95);
-            backdrop-filter: blur(30px);
-            padding: 1.2rem 2.5rem;
+            background: rgba(10, 10, 10, 0.98);
+            backdrop-filter: blur(40px);
+            padding: 1.5rem 2.5rem;
             border-radius: 2.5rem 2.5rem 0 0;
             border: 1px solid rgba(255,255,255,0.1);
             display: flex;
-            gap: 0.8rem;
+            flex-direction: column;
+            gap: 1.2rem;
             z-index: 1000;
             transition: bottom 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-            max-width: 90vw;
-            overflow-x: auto;
+            width: fit-content;
+            max-width: 95vw;
         }
 
         .trigger-zone:hover + .system-dock, .system-dock:hover {
@@ -83,7 +85,7 @@
             bottom: 0;
             left: 0;
             right: 0;
-            height: 50px;
+            height: 60px;
             z-index: 999;
         }
 
@@ -98,10 +100,29 @@
             transition: all 0.2s;
             color: rgba(255,255,255,0.4);
             white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .dock-item:hover { color: #fff; background: rgba(255,255,255,0.1); }
         .dock-item.active { background: #fff; color: #000; }
+
+        .control-btn {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.05);
+            transition: all 0.2s;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .control-btn:hover { background: rgba(255,255,255,0.15); scale: 1.1; border-color: white; }
+        .control-btn:active { scale: 0.95; }
 
         .progress-bar {
             height: 100%;
@@ -109,26 +130,46 @@
             transition: width 1s linear;
         }
 
-        .massive-text { font-family: 'Unbounded', sans-serif; }
-        .lyrics-text { font-family: 'Space Grotesk', sans-serif; }
-
         .qr-wrapper canvas, .qr-wrapper img {
             width: 100% !important;
             height: auto !important;
             display: block;
         }
 
-        @keyframes rotate-vinyl {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        .vinyl-spin { animation: rotate-vinyl 20s linear infinite; }
-
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        select {
+            appearance: none;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            padding: 0.6rem 2.5rem 0.6rem 1rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s;
+        }
         
-        .lyrics-gradient {
-            mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+        select:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
+
+        .floating-controls {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(20px);
+            border-radius: 2rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            margin-top: 2rem;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
     </style>
 </head>
@@ -141,7 +182,7 @@
         const CLIENT_ID = "52f166f3b18a4aee8d2a91649a371134"; 
         const REDIRECT_URI = window.location.origin + window.location.pathname;
 
-        // PKCE Helpers
+        // PKCE Auth Helpers
         const generateRandomString = (length) => {
             const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
             const values = crypto.getRandomValues(new Uint8Array(length));
@@ -159,45 +200,61 @@
                 .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
         };
 
-        // QR Code Component - Jetzt mit eckigen Kanten und "Quiet Zone"
+        // QR Code Component - Großer & Scanbarer
         const CommonQR = ({ size = "w-32", url }) => {
             const localRef = useRef(null);
-            
             useEffect(() => {
                 if (localRef.current) {
                     localRef.current.innerHTML = "";
                     try {
                         new QRCode(localRef.current, {
                             text: url || "https://spotify.com", 
-                            width: 256, height: 256,
+                            width: 512, height: 512,
                             colorDark: "#000000", colorLight: "#ffffff",
-                            correctLevel : QRCode.CorrectLevel.M // Medium Error Correction für bessere Lesbarkeit
+                            correctLevel : QRCode.CorrectLevel.M
                         });
-                    } catch (e) {
-                        console.error("QR Error", e);
-                    }
+                    } catch (e) { console.error(e); }
                 }
             }, [url]);
 
             return (
-                <div className={`${size} bg-black/40 backdrop-blur-xl p-3 rounded-xl relative qr-wrapper flex-shrink-0 border border-white/20 shadow-2xl`}>
-                    {/* Der innere Container hat jetzt nur noch leicht abgerundete Ecken und ein weißes Padding (Quiet Zone) */}
-                    <div className="bg-white p-2 rounded-md w-full aspect-square flex items-center justify-center">
-                        <div ref={localRef} className="w-full h-full"></div>
+                <div className={`${size} bg-black/40 backdrop-blur-3xl p-4 rounded-3xl relative qr-wrapper flex-shrink-0 border border-white/20 shadow-2xl`}>
+                    <div className="bg-white p-3 rounded-xl w-full aspect-square flex items-center justify-center overflow-hidden">
+                        <div ref={localRef} className="w-full h-full scale-[1.02]"></div>
                     </div>
                 </div>
             );
         };
 
+        // UI Controls Component (Play/Pause/Skip)
+        const InlineControls = ({ isPlaying, onAction }) => (
+            <div className="floating-controls">
+                <button className="control-btn" onClick={() => onAction("previous")}>
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+                </button>
+                <button className="control-btn !w-14 !h-14 bg-white text-black border-none" onClick={() => onAction(isPlaying ? "pause" : "play", isPlaying ? "PUT" : "PUT")}>
+                    {isPlaying ? 
+                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg> :
+                        <svg className="w-6 h-6 translate-x-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    }
+                </button>
+                <button className="control-btn" onClick={() => onAction("next")}>
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="m6 18 8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                </button>
+            </div>
+        );
+
         function App() {
             const [token, setToken] = useState(window.localStorage.getItem("spotify_token") || "");
             const [data, setData] = useState(null);
             const [queue, setQueue] = useState([]);
-            const [layout, setLayout] = useState("split"); 
+            const [devices, setDevices] = useState([]);
+            const [layout, setLayout] = useState("tv"); 
             const [jamUrl, setJamUrl] = useState(window.localStorage.getItem("jam_url") || "");
-            const [isLoading, setIsLoading] = useState(!!token); 
+            const [isLoading, setIsLoading] = useState(!!token);
+            const [showControlsInLayout, setShowControlsInLayout] = useState(false);
 
-            // Handle Login Callback
+            // Auth Effect
             useEffect(() => {
                 const urlParams = new URLSearchParams(window.location.search);
                 const code = urlParams.get('code');
@@ -209,11 +266,8 @@
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                                 body: new URLSearchParams({
-                                    client_id: CLIENT_ID,
-                                    grant_type: 'authorization_code',
-                                    code: code,
-                                    redirect_uri: REDIRECT_URI,
-                                    code_verifier: codeVerifier,
+                                    client_id: CLIENT_ID, grant_type: 'authorization_code',
+                                    code: code, redirect_uri: REDIRECT_URI, code_verifier: codeVerifier,
                                 }),
                             });
                             const result = await response.json();
@@ -222,50 +276,54 @@
                                 window.localStorage.setItem("spotify_token", result.access_token);
                                 window.history.replaceState({}, document.title, window.location.pathname);
                             }
-                        } catch (e) { console.error("Auth Error", e); }
+                        } catch (e) { console.error(e); }
                     };
                     getToken();
                 }
             }, []);
 
-            // Data Fetching Interval
+            // Main Data Fetch Loop
             useEffect(() => {
                 if (!token) return;
-                
                 const fetchData = async () => {
+                    const headers = { Authorization: `Bearer ${token}` };
                     try {
-                        const headers = { Authorization: `Bearer ${token}` };
-                        
-                        // Fetch Player Status
                         const playerRes = await fetch("https://api.spotify.com/v1/me/player", { headers });
-                        
-                        if (playerRes.status === 200) {
-                            setData(await playerRes.json());
-                        } else if (playerRes.status === 204) {
-                            setData(null); 
-                        } else if (playerRes.status === 401) {
-                            handleLogout();
-                            return;
-                        }
+                        if (playerRes.status === 200) setData(await playerRes.json());
+                        else if (playerRes.status === 204) setData(null);
+                        else if (playerRes.status === 401) handleLogout();
 
-                        // Fetch Queue
                         const queueRes = await fetch("https://api.spotify.com/v1/me/player/queue", { headers });
-                        if (queueRes.status === 200) {
-                            const qData = await queueRes.json();
-                            setQueue(qData.queue || []);
-                        }
-                    } catch (e) { 
-                        console.error("API Error", e); 
-                    } finally {
-                        setIsLoading(false);
-                    }
-                };
+                        if (queueRes.status === 200) setQueue((await queueRes.json()).queue || []);
 
+                        const devRes = await fetch("https://api.spotify.com/v1/me/player/devices", { headers });
+                        if (devRes.status === 200) setDevices((await devRes.json()).devices || []);
+                    } catch (e) { console.error(e); } finally { setIsLoading(false); }
+                };
                 fetchData();
                 const i = setInterval(fetchData, 3000);
                 return () => clearInterval(i);
             }, [token]);
 
+            const playerAction = async (endpoint, method = "POST") => {
+                if (!token) return;
+                try {
+                    await fetch(`https://api.spotify.com/v1/me/player/${endpoint}`, {
+                        method: method, headers: { Authorization: `Bearer ${token}` }
+                    });
+                } catch (e) { console.error(e); }
+            };
+
+            const transferPlayback = async (deviceId) => {
+                if (!token) return;
+                try {
+                    await fetch("https://api.spotify.com/v1/me/player", {
+                        method: "PUT",
+                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ device_ids: [deviceId], play: true })
+                    });
+                } catch (e) { console.error(e); }
+            };
 
             const login = async () => {
                 const codeVerifier = generateRandomString(64);
@@ -274,7 +332,7 @@
                 window.localStorage.setItem('code_verifier', codeVerifier);
                 const params = new URLSearchParams({
                     response_type: 'code', client_id: CLIENT_ID,
-                    scope: "user-read-currently-playing user-read-playback-state",
+                    scope: "user-read-currently-playing user-read-playback-state user-modify-playback-state",
                     code_challenge_method: 'S256', code_challenge: codeChallenge,
                     redirect_uri: REDIRECT_URI, show_dialog: true
                 });
@@ -286,173 +344,39 @@
                 window.location.href = window.location.pathname;
             };
 
-            if (!token) {
-                return (
-                    <div className="h-screen w-screen flex flex-col items-center justify-center bg-zinc-950 text-white relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-[#1DB954]/10 to-transparent"></div>
-                        <img src="Logo.svg" alt="Logo" className="w-24 h-24 mb-10 opacity-80 relative z-10" />
-                        <h1 className="text-5xl font-black uppercase tracking-tighter mb-4 relative z-10">Jam Dashboard</h1>
-                        <p className="text-white/40 mb-12 uppercase tracking-[0.2em] text-sm relative z-10">Bitte mit Spotify verbinden</p>
-                        <button onClick={login} className="bg-[#1DB954] text-black px-10 py-5 rounded-full font-black text-xl hover:scale-105 transition-transform relative z-10 shadow-[0_0_40px_rgba(29,185,84,0.4)]">
-                            Spotify Login
-                        </button>
-                    </div>
-                );
-            }
-
             const renderLayout = () => {
-                if (isLoading) {
-                    return (
-                        <div className="flex-grow flex flex-col items-center justify-center text-white/30 uppercase tracking-[1em] font-bold">
-                            <div className="w-12 h-12 border-4 border-white/10 border-t-white/60 rounded-full animate-spin mb-8"></div>
-                            Lade Dashboard...
-                        </div>
-                    );
-                }
-
-                if (!data?.item) {
-                    return (
-                        <div className="flex-grow flex flex-col items-center justify-center text-white/40 text-center space-y-6">
-                            <div className="w-24 h-24 glass rounded-full flex items-center justify-center mb-4">
-                                <svg className="w-10 h-10 opacity-50" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>
-                            </div>
-                            <h2 className="text-4xl font-black uppercase tracking-widest text-white">Warte auf Musik</h2>
-                            <p className="text-sm tracking-[0.3em] uppercase opacity-70">Öffne Spotify und starte die Wiedergabe</p>
-                        </div>
-                    );
-                }
+                if (isLoading) return <div className="flex-grow flex items-center justify-center text-white/20 uppercase tracking-[1em] font-black">Connecting...</div>;
+                if (!data?.item) return <div className="flex-grow flex items-center justify-center text-white/40 uppercase tracking-widest text-4xl font-black">Warte auf Wiedergabe...</div>;
 
                 const track = data.item;
                 const progress = (data.progress_ms / track.duration_ms) * 100;
                 const imageUrl = track?.album?.images?.[0]?.url;
-                const safeQueue = queue || [];
 
                 switch(layout) {
                     case "tv":
                         return (
-                            <div className="flex-grow flex flex-row p-12 gap-12 overflow-hidden">
-                                <div className="flex-grow flex flex-col justify-end gap-10">
-                                    <div className="flex items-end gap-8">
-                                        {imageUrl && <img src={imageUrl} className="w-32 h-32 rounded-3xl shadow-2xl" />}
-                                        <div className="pb-2">
-                                            <h1 className="text-[5rem] font-black tracking-tighter uppercase leading-[0.85] mb-4">{track.name}</h1>
-                                            <p className="text-3xl font-bold text-white/50 uppercase">{track.artists[0].name}</p>
-                                        </div>
-                                    </div>
-                                    <div className="w-full max-w-5xl space-y-4">
-                                        <div className="h-3 bg-white/10 rounded-full overflow-hidden">
-                                            <div className="progress-bar" style={{width: `${progress}%`}}></div>
-                                        </div>
-                                        <div className="flex justify-between text-[11px] font-black uppercase tracking-[0.4em] text-white/30">
-                                            <span>{track.album.name}</span>
-                                            <span>{Math.floor(data.progress_ms/60000)}:{String(Math.floor(data.progress_ms%60000/1000)).padStart(2,'0')}</span>
-                                        </div>
-                                    </div>
+                            <div className="flex-grow flex flex-row p-12 gap-20 items-center">
+                                <div className="w-[50%] shrink-0 flex flex-col items-center">
+                                    {imageUrl && <img src={imageUrl} className="w-full aspect-square rounded-[3.5rem] shadow-[0_80px_120px_rgba(0,0,0,0.85)] border border-white/5" />}
+                                    {showControlsInLayout && <InlineControls isPlaying={data.is_playing} onAction={playerAction} />}
                                 </div>
-                                <div className="w-[450px] shrink-0 flex flex-col gap-8">
-                                    <div className="glass p-8 rounded-[2.5rem] flex-grow flex flex-col overflow-hidden">
-                                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 mb-8">Warteschlange</h3>
-                                        <div className="flex-grow overflow-y-auto no-scrollbar space-y-6">
-                                            {safeQueue.slice(0, 10).map((t, i) => (
-                                                <div key={i} className="flex items-center gap-5">
-                                                    <img src={t.album?.images?.[2]?.url} className="w-10 h-10 rounded-lg" />
-                                                    <div className="truncate"><p className="text-sm font-black uppercase truncate">{t.name}</p></div>
-                                                </div>
-                                            ))}
+                                <div className="flex-grow flex flex-col justify-center gap-16">
+                                    <div>
+                                        <h1 className="text-[6.5rem] font-black tracking-tighter uppercase leading-[0.8] mb-8">{track.name}</h1>
+                                        <p className="text-5xl font-bold text-white/50 uppercase italic tracking-tight">{track.artists[0].name}</p>
+                                    </div>
+                                    <div className="w-full space-y-8">
+                                        <div className="h-4 bg-white/10 rounded-full overflow-hidden"><div className="progress-bar" style={{width: `${progress}%`}}></div></div>
+                                        <div className="flex justify-between text-sm font-black uppercase tracking-[0.5em] text-white/30">
+                                            <span className="truncate max-w-[400px]">{track.album.name}</span>
+                                            <span>{Math.floor(data.progress_ms/60000)}:{String(Math.floor(data.progress_ms%60000/1000)).padStart(2,'0')} / {Math.floor(track.duration_ms/60000)}:{String(Math.floor(track.duration_ms%60000/1000)).padStart(2,'0')}</span>
                                         </div>
                                     </div>
-                                    <div className="glass p-8 rounded-[2.5rem] flex items-center justify-between gap-6">
-                                        <div><p className="text-[10px] font-black uppercase text-white/40 mb-1">Beitreten</p><p className="text-xl font-black uppercase tracking-tighter">Spotify Jam</p></div>
-                                        <CommonQR size="w-32" url={jamUrl} />
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    case "lyrics":
-                        return (
-                            <div className="flex-grow flex flex-row p-20 gap-20 overflow-hidden">
-                                <div className="w-1/3 flex flex-col justify-center">
-                                    {imageUrl && <img src={imageUrl} className="w-full aspect-square rounded-[3rem] shadow-2xl mb-12" />}
-                                    <h1 className="text-5xl font-black uppercase tracking-tighter mb-4">{track.name}</h1>
-                                    <p className="text-2xl font-bold text-white/40 uppercase">{track.artists[0].name}</p>
-                                </div>
-                                <div className="flex-grow lyrics-text flex flex-col justify-center lyrics-gradient">
-                                    <div className="space-y-12 opacity-80">
-                                        <p className="text-6xl font-bold leading-tight">Es ist ein Traum,</p>
-                                        <p className="text-6xl font-bold leading-tight text-white scale-105 origin-left transition-transform">Den ich mit dir teile,</p>
-                                        <p className="text-6xl font-bold leading-tight opacity-40">Über alle Grenzen,</p>
-                                        <p className="text-6xl font-bold leading-tight opacity-20">In dieser Weile.</p>
-                                    </div>
-                                    <div className="mt-20 p-6 glass rounded-2xl border border-[#1DB954]/20 inline-block">
-                                        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#1DB954] flex items-center gap-3">
-                                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                                            Spotify gibt über die API leider keine Songtexte heraus.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    case "split":
-                        return (
-                            <div className="flex-grow grid grid-cols-2">
-                                <div className="relative flex items-center justify-center border-r border-white/5 overflow-hidden">
-                                    {imageUrl && <img src={imageUrl} className="absolute inset-0 w-full h-full object-cover opacity-40 scale-110 blur-xl" />}
-                                    <div className="relative z-10 flex flex-col items-center w-full px-12">
-                                        {imageUrl && <img src={imageUrl} className="w-3/4 max-w-[28rem] rounded-2xl shadow-2xl mb-10" />}
-                                        <div className="text-center w-full">
-                                            <h1 className="text-5xl font-black italic uppercase tracking-tighter mb-4 truncate">{track.name}</h1>
-                                            <p className="text-2xl font-medium text-white/60 uppercase truncate">{track.artists[0].name}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="bg-zinc-950/80 backdrop-blur-3xl p-16 flex flex-col">
-                                    <h2 className="text-[12px] font-black uppercase tracking-[0.5em] text-[#1DB954] mb-12">Warteschlange</h2>
-                                    <div className="flex-grow space-y-10 overflow-y-auto no-scrollbar">
-                                        {safeQueue.length === 0 && <p className="text-white/30 italic">Warteschlange ist leer...</p>}
-                                        {safeQueue.slice(0, 5).map((t, i) => (
-                                            <div key={i} className="flex items-center justify-between group">
-                                                <div className="flex items-center gap-6">
-                                                    <span className="text-2xl font-black text-white/10 w-6 text-center">{i+1}</span>
-                                                    <img src={t.album?.images?.[2]?.url} className="w-14 h-14 rounded-xl group-hover:scale-110 transition-transform" />
-                                                    <div>
-                                                        <p className="text-lg font-black uppercase leading-tight">{t.name}</p>
-                                                        <p className="text-sm font-bold text-white/40">{t.artists[0].name}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="mt-10 pt-10 border-t border-white/10 flex items-center justify-between gap-8">
-                                        <div>
-                                            <p className="text-2xl font-black uppercase tracking-widest mb-2">Party beitreten</p>
-                                            <p className="text-xs font-bold text-white/40 uppercase tracking-widest leading-relaxed">Code scannen um<br/>Songs hinzuzufügen</p>
-                                        </div>
+                                    <div className="flex items-center gap-10 bg-black/50 p-8 rounded-[2.5rem] w-fit border border-white/10">
                                         <CommonQR size="w-40" url={jamUrl} />
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    case "vinyl":
-                        return (
-                            <div className="flex-grow flex items-center justify-center p-20 gap-24">
-                                <div className="relative w-[500px] h-[500px] shrink-0">
-                                    <div className="absolute inset-4 bg-zinc-900 rounded-full shadow-[0_0_100px_rgba(0,0,0,1)] flex items-center justify-center overflow-hidden vinyl-spin">
-                                        <div className="w-full h-full opacity-30 bg-[repeating-radial-gradient(circle,transparent,transparent_2px,black_3px)]"></div>
-                                        {imageUrl && <img src={imageUrl} className="absolute w-48 h-48 rounded-full border-4 border-zinc-800 z-10" />}
-                                    </div>
-                                    <div className="absolute top-1/2 left-[95%] w-48 h-2 bg-zinc-800 origin-left -rotate-45 ml-4 rounded-full shadow-2xl"></div>
-                                </div>
-                                <div className="max-w-xl space-y-12 w-full">
-                                    <div className="space-y-4">
-                                        <p className="text-[12px] font-black uppercase tracking-[1em] text-[#1DB954]">Now Spinning</p>
-                                        <h1 className="text-[5rem] font-black italic uppercase tracking-tighter leading-[0.85]">{track.name}</h1>
-                                        <p className="text-4xl font-bold text-white/40 italic">{track.artists[0].name}</p>
-                                    </div>
-                                    <div className="flex items-center gap-10 bg-white/5 p-6 rounded-3xl backdrop-blur-xl border border-white/10">
-                                        <CommonQR size="w-36" url={jamUrl} />
-                                        <div className="space-y-4 flex-grow">
-                                            <p className="text-[11px] font-bold text-white/40 uppercase tracking-[0.4em]">Plattennadel bei {Math.floor(progress)}%</p>
-                                            <div className="h-1.5 bg-black/50 rounded-full overflow-hidden"><div className="h-full bg-white" style={{width: `${progress}%`}}></div></div>
+                                        <div>
+                                            <p className="text-xl font-black uppercase tracking-widest mb-1 italic">Party beitreten</p>
+                                            <p className="text-xs font-bold text-[#1DB954] uppercase tracking-[0.3em]">Spotify Jam Session</p>
                                         </div>
                                     </div>
                                 </div>
@@ -460,77 +384,64 @@
                         );
                     case "social":
                         return (
-                            <div className="flex-grow flex flex-col p-12 gap-8">
-                                <div className="flex items-center justify-between bg-black/40 p-6 px-10 rounded-[2rem] backdrop-blur-xl border border-white/5">
-                                    <div className="flex items-center gap-6">
-                                        <div className="w-14 h-14 bg-[#1DB954]/20 rounded-full flex items-center justify-center">
-                                            <img src="Logo.svg" className="w-8 h-8 opacity-80" />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-2xl font-black uppercase italic tracking-tighter">Live Session</h3>
-                                            <p className="text-[11px] font-bold text-[#1DB954] uppercase tracking-[0.3em] flex items-center gap-2">
-                                                <span className="w-2 h-2 rounded-full bg-[#1DB954] animate-pulse"></span>
-                                                Offene Runde
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-6">
-                                        <p className="text-xs font-bold text-white/40 uppercase tracking-widest text-right">Jetzt<br/>Mitmachen</p>
-                                        <CommonQR size="w-28" url={jamUrl} />
+                            <div className="flex-grow flex items-center justify-center p-20 gap-32">
+                                <div className="w-[550px] flex flex-col items-center gap-16 shrink-0">
+                                    <CommonQR size="w-full" url={jamUrl} />
+                                    <div className="text-center bg-white/5 px-10 py-6 rounded-full border border-white/10">
+                                        <p className="text-3xl font-black uppercase tracking-[0.3em] mb-1 text-[#1DB954]">Scan To Jam</p>
+                                        <p className="text-sm font-bold text-white/30 uppercase tracking-[0.5em]">Beats hinzufügen</p>
                                     </div>
                                 </div>
-                                <div className="flex-grow grid grid-cols-3 gap-8">
-                                    <div className="col-span-2 glass rounded-[3rem] p-16 flex flex-col justify-end relative overflow-hidden">
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-0"></div>
-                                        <div className="relative z-10">
-                                            {imageUrl && <img src={imageUrl} className="w-56 h-56 rounded-[2.5rem] shadow-2xl mb-10" />}
-                                            <h1 className="text-[6rem] font-black uppercase tracking-tighter leading-[0.9] mb-4">{track.name}</h1>
-                                            <p className="text-4xl font-bold text-white/50 uppercase">{track.artists[0].name}</p>
-                                            <div className="mt-12 h-3 bg-black/50 rounded-full overflow-hidden border border-white/10"><div className="h-full bg-[#1DB954]" style={{width: `${progress}%`}}></div></div>
-                                        </div>
+                                <div className="flex-grow flex flex-col justify-center">
+                                    <div className="relative w-fit">
+                                        {imageUrl && <img src={imageUrl} className="w-64 h-64 rounded-[3rem] shadow-2xl mb-12 border border-white/10" />}
+                                        {showControlsInLayout && <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 scale-75"><InlineControls isPlaying={data.is_playing} onAction={playerAction} /></div>}
                                     </div>
-                                    <div className="flex flex-col gap-8">
-                                        <div className="glass rounded-[3rem] p-10 flex-grow">
-                                            <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-white/40 mb-10">Warteschlange</h4>
-                                            <div className="space-y-8">
-                                                {safeQueue.slice(0, 4).map((t, i) => (
-                                                    <div key={i} className="flex items-center gap-5 opacity-90">
-                                                        <img src={t.album?.images?.[2]?.url} className="w-14 h-14 rounded-xl" />
-                                                        <div className="truncate">
-                                                            <p className="text-base font-black uppercase truncate">{t.name}</p>
-                                                            <p className="text-xs font-bold text-white/40 truncate">{t.artists[0].name}</p>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <h1 className="text-[12vw] font-black uppercase leading-[0.75] tracking-tighter italic mb-10">{track.name}</h1>
+                                    <p className="text-7xl font-light text-white/50 uppercase tracking-tighter mb-16">{track.artists[0].name}</p>
+                                    <div className="h-2 w-full bg-white/10 rounded-full"><div className="h-full bg-white shadow-[0_0_20px_#fff]" style={{width: `${progress}%`}}></div></div>
                                 </div>
                             </div>
                         );
-                    case "cinematic":
+                    case "split":
                         return (
-                            <div className="flex-grow flex flex-col justify-end p-24 relative">
-                                <div className="absolute inset-0 z-0">{imageUrl && <img src={imageUrl} className="w-full h-full object-cover opacity-30 blur-3xl scale-110" />}</div>
-                                <div className="relative z-10 space-y-16 max-w-7xl w-full mx-auto">
-                                    <div className="space-y-6">
-                                        <p className="text-2xl font-bold tracking-[0.5em] text-[#1DB954] uppercase">Playing Now</p>
-                                        <h1 className="text-[9vw] font-black uppercase tracking-tighter leading-none italic drop-shadow-2xl">{track.name}</h1>
-                                        <div className="flex items-center gap-10">
-                                            <p className="text-5xl font-light text-white/80 uppercase">{track.artists[0].name}</p>
-                                            <span className="h-[2px] flex-grow bg-white/20"></span>
+                            <div className="flex-grow grid grid-cols-2">
+                                <div className="flex flex-col items-center justify-center p-20 border-r border-white/5">
+                                    <div className="w-full max-w-lg">
+                                        <div className="relative mb-16">
+                                            {imageUrl && <img src={imageUrl} className="w-full rounded-[2.5rem] shadow-2xl border border-white/5" />}
+                                            {showControlsInLayout && <div className="absolute -bottom-10 left-1/2 -translate-x-1/2"><InlineControls isPlaying={data.is_playing} onAction={playerAction} /></div>}
+                                        </div>
+                                        <h1 className="text-6xl font-black uppercase mb-4 italic tracking-tighter leading-tight">{track.name}</h1>
+                                        <p className="text-3xl text-white/40 font-bold uppercase tracking-tight">{track.artists[0].name}</p>
+                                    </div>
+                                </div>
+                                <div className="p-24 flex flex-col justify-between bg-zinc-950/40 backdrop-blur-xl">
+                                    <div>
+                                        <div className="flex items-center gap-4 mb-14">
+                                            <div className="w-3 h-3 rounded-full bg-[#1DB954] animate-pulse"></div>
+                                            <h2 className="text-xs font-black uppercase tracking-[0.5em] text-[#1DB954]">Warteschlange</h2>
+                                        </div>
+                                        <div className="space-y-10">
+                                            {queue.slice(0, 5).map((t, i) => (
+                                                <div key={i} className="flex gap-8 items-center group cursor-pointer">
+                                                    <div className="relative">
+                                                        <img src={t.album?.images?.[2]?.url} className="w-16 h-16 rounded-xl opacity-60 group-hover:opacity-100 transition-opacity" />
+                                                        <span className="absolute -top-3 -left-3 w-7 h-7 bg-white text-black text-[10px] flex items-center justify-center rounded-full font-black">{i+1}</span>
+                                                    </div>
+                                                    <div className="truncate">
+                                                        <p className="text-xl font-black uppercase truncate group-hover:text-[#1DB954] transition-colors">{t.name}</p>
+                                                        <p className="text-sm font-bold text-white/30 uppercase">{t.artists[0].name}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
-                                    <div className="flex items-end justify-between">
-                                        <div className="w-1/2 h-[2px] bg-white/10 relative"><div className="absolute top-0 left-0 h-[4px] -top-[1px] bg-white shadow-[0_0_30px_#fff]" style={{width: `${progress}%`}}></div></div>
-                                        <div className="flex gap-12 items-center bg-black/60 p-6 pl-10 rounded-[2.5rem] backdrop-blur-2xl border border-white/10">
-                                            <div className="text-right">
-                                                <p className="text-[11px] font-black uppercase tracking-[0.6em] text-white/40 mb-3">Als Nächstes</p>
-                                                <p className="text-2xl font-bold uppercase italic max-w-[200px] truncate">{safeQueue[0]?.name || 'Nichts geplant'}</p>
-                                                <p className="text-sm text-white/40 uppercase mt-1 truncate max-w-[200px]">{safeQueue[0]?.artists[0]?.name || ''}</p>
-                                            </div>
-                                            <div className="w-[1px] h-16 bg-white/10"></div>
-                                            <CommonQR size="w-36" url={jamUrl} />
+                                    <div className="flex items-center justify-between gap-12 pt-16 border-t border-white/10">
+                                        <CommonQR size="w-56" url={jamUrl} />
+                                        <div className="text-right">
+                                            <p className="text-3xl font-black uppercase mb-3 italic tracking-tighter">Join Jam</p>
+                                            <p className="text-sm font-bold text-white/30 uppercase tracking-[0.2em] leading-relaxed">Scannen & Song<br/>direkt wählen</p>
                                         </div>
                                     </div>
                                 </div>
@@ -539,29 +450,13 @@
                     case "minimal":
                         return (
                             <div className="flex-grow flex flex-col items-center justify-center text-center p-20">
-                                <div className="mb-16 relative">
-                                    <div className="absolute -inset-20 bg-white/5 blur-[120px] rounded-full"></div>
-                                    {imageUrl && <img src={imageUrl} className="w-[28rem] h-[28rem] rounded-[4rem] shadow-[0_50px_100px_rgba(0,0,0,0.8)] relative z-10" />}
+                                <div className="relative mb-24">
+                                    {imageUrl && <img src={imageUrl} className="w-[34rem] h-[34rem] rounded-[5rem] shadow-[0_80px_150px_rgba(0,0,0,0.9)] relative z-10 border border-white/5" />}
+                                    {showControlsInLayout && <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 z-20"><InlineControls isPlaying={data.is_playing} onAction={playerAction} /></div>}
                                 </div>
-                                <div className="space-y-6 max-w-5xl relative z-10">
-                                    <h1 className="text-[6rem] font-black uppercase tracking-tighter leading-none italic">{track.name}</h1>
-                                    <p className="text-4xl font-light text-white/50 tracking-widest uppercase">{track.artists.map(a => a.name).join(" • ")}</p>
-                                    <div className="w-96 mx-auto pt-12"><div className="h-[3px] bg-white/10 rounded-full"><div className="h-full bg-white rounded-full shadow-[0_0_15px_#fff]" style={{width: `${progress}%`}}></div></div></div>
-                                </div>
-                            </div>
-                        );
-                    case "massive":
-                        return (
-                            <div className="flex-grow flex flex-col massive-text justify-center px-20">
-                                <h2 className="text-[5vw] leading-none opacity-20 uppercase mb-6 flex items-center gap-6">
-                                    <svg className="w-[4vw] h-[4vw]" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                                    {safeQueue[0]?.name || '---'}
-                                </h2>
-                                <h1 className="text-[15vw] leading-[0.8] font-black italic uppercase tracking-tighter mb-10">{track.name}</h1>
-                                <div className="flex items-center gap-16">
-                                    <p className="text-6xl text-white/50 font-light uppercase tracking-tighter">{track.artists[0].name}</p>
-                                    <div className="flex-grow h-6 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-[#1DB954] shadow-[0_0_30px_#1DB954]" style={{width: `${progress}%`}}></div></div>
-                                </div>
+                                <h1 className="text-[8vw] font-black uppercase tracking-tighter mb-6 italic leading-none">{track.name}</h1>
+                                <p className="text-5xl font-light text-white/40 uppercase tracking-[0.3em]">{track.artists[0].name}</p>
+                                <div className="w-80 h-1 bg-white/5 rounded-full mt-20 overflow-hidden"><div className="h-full bg-white shadow-[0_0_15px_#fff]" style={{width: `${progress}%`}}></div></div>
                             </div>
                         );
                     default: return null;
@@ -579,32 +474,78 @@
 
                     <div className="app-container">
                         <header className="p-10 flex justify-between items-start pointer-events-none">
-                            <img src="Logo.svg" className="w-16 h-16 opacity-40" alt="Logo" />
-                            <div className="text-right opacity-40">
-                                <p className="text-4xl font-black italic tracking-tighter">{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                                <p className="text-[11px] font-black uppercase tracking-[0.5em] mt-1 text-[#1DB954]">{layout} View</p>
+                            <img src="Logo.svg" className="w-16 h-16 opacity-30" />
+                            <div className="text-right opacity-60">
+                                <p className="text-5xl font-black italic tracking-tighter">{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                <p className="text-[10px] font-black uppercase tracking-[0.8em] mt-2 text-[#1DB954]">{layout} View</p>
                             </div>
                         </header>
-                        
                         {renderLayout()}
                     </div>
 
                     <div className="trigger-zone"></div>
                     <div className="system-dock">
-                        {['tv', 'lyrics', 'split', 'vinyl', 'social', 'cinematic', 'minimal', 'massive'].map(mode => (
-                            <div key={mode} className={`dock-item ${layout === mode ? 'active' : ''}`} onClick={() => setLayout(mode)}>{mode}</div>
-                        ))}
-                        <div className="w-[1px] h-6 bg-white/10 mx-2"></div>
-                        <input 
-                            className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-[11px] font-bold text-white outline-none w-56 focus:bg-white/10 transition-colors" 
-                            placeholder="Dein Spotify Jam Link hier..." 
-                            value={jamUrl} 
-                            onChange={(e) => {
-                                setJamUrl(e.target.value); 
-                                window.localStorage.setItem("jam_url", e.target.value);
-                            }} 
-                        />
-                        <div className="dock-item text-red-500/60 hover:!text-red-500 hover:bg-red-500/10" onClick={handleLogout}>Logout</div>
+                        {/* Player Controls & Device Picker */}
+                        <div className="flex items-center justify-between gap-12 px-2">
+                            <div className="flex items-center gap-3">
+                                <div className="control-btn" onClick={() => playerAction("previous")}>
+                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+                                </div>
+                                <div className="control-btn !w-14 !h-14 bg-white text-black border-none" onClick={() => playerAction(data?.is_playing ? "pause" : "play", data?.is_playing ? "PUT" : "PUT")}>
+                                    {data?.is_playing ? 
+                                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg> :
+                                        <svg className="w-6 h-6 translate-x-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                    }
+                                </div>
+                                <div className="control-btn" onClick={() => playerAction("next")}>
+                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="m6 18 8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-6">
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-[8px] font-bold text-white/30 uppercase tracking-widest ml-1">Wiedergabe auf:</span>
+                                    <select 
+                                        value={data?.device?.id || ""} 
+                                        onChange={(e) => transferPlayback(e.target.value)}
+                                    >
+                                        <option value="" disabled>Gerät wählen...</option>
+                                        {devices.map(d => (
+                                            <option key={d.id} value={d.id}>{d.is_active ? '▶ ' : ''}{d.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-[8px] font-bold text-white/30 uppercase tracking-widest ml-1">Jam Link:</span>
+                                    <input 
+                                        className="bg-white/5 border border-white/10 px-4 py-2.5 rounded-xl text-[11px] font-bold text-white outline-none w-64 focus:bg-white/10 transition-colors" 
+                                        placeholder="Spotify Jam Link einfügen..." 
+                                        value={jamUrl} 
+                                        onChange={(e) => {
+                                            setJamUrl(e.target.value); 
+                                            window.localStorage.setItem("jam_url", e.target.value);
+                                        }} 
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Layout Switcher & Options */}
+                        <div className="flex items-center gap-3 border-t border-white/5 pt-5">
+                            {['tv', 'social', 'split', 'minimal'].map(mode => (
+                                <div key={mode} className={`dock-item ${layout === mode ? 'active' : ''}`} onClick={() => setLayout(mode)}>{mode}</div>
+                            ))}
+                            <div className="w-[1px] h-6 bg-white/10 mx-2"></div>
+                            <div 
+                                className={`dock-item ${showControlsInLayout ? 'active' : ''}`} 
+                                onClick={() => setShowControlsInLayout(!showControlsInLayout)}
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                Buttons anzeigen
+                            </div>
+                            <div className="flex-grow"></div>
+                            <div className="dock-item text-red-500/60 hover:!text-red-500 hover:bg-red-500/10" onClick={handleLogout}>Logout</div>
+                        </div>
                     </div>
                 </div>
             );
