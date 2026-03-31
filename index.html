@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jam Dashboard - v3.3.0</title>
+    <title>Jam Dashboard - v3.3.1</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -434,25 +434,41 @@
                         );
                     case "vinyl":
                         return (
-                            <div className="flex-grow flex items-center justify-center p-20 gap-24">
-                                <div className="relative w-[500px] h-[500px] shrink-0">
-                                    <div className="absolute inset-4 bg-zinc-900 rounded-full shadow-[0_0_100px_rgba(0,0,0,1)] flex items-center justify-center overflow-hidden vinyl-spin">
-                                        <div className="w-full h-full opacity-30 bg-[repeating-radial-gradient(circle,transparent,transparent_2px,black_3px)]"></div>
-                                        {imageUrl && <img src={imageUrl} className="absolute w-48 h-48 rounded-full border-4 border-zinc-800 z-10" />}
+                            <div className="flex-grow flex items-center justify-center p-20 gap-24 relative overflow-hidden">
+                                <div className="relative w-[550px] h-[550px] shrink-0">
+                                    {/* Vinyl Platte */}
+                                    <div className="absolute inset-4 bg-zinc-900 rounded-full shadow-[0_0_120px_rgba(0,0,0,1)] flex items-center justify-center overflow-hidden vinyl-spin border-[10px] border-zinc-800/50">
+                                        <div className="absolute inset-0 opacity-40 bg-[repeating-radial-gradient(circle,transparent,transparent_2px,black_4px)]"></div>
+                                        {imageUrl && <img src={imageUrl} className="absolute w-56 h-56 rounded-full border-8 border-zinc-900 z-10 shadow-inner" />}
+                                        <div className="absolute w-4 h-4 bg-zinc-950 rounded-full z-20 shadow-xl border border-white/10"></div>
                                     </div>
-                                    <div className="absolute top-1/2 left-[95%] w-48 h-2 bg-zinc-800 origin-left -rotate-45 ml-4 rounded-full shadow-2xl"></div>
+                                    
+                                    {/* Tonarm / Nadel */}
+                                    <div className="tone-arm-container" style={{ transform: `rotate(${15 + (progress * 0.25)}deg)` }}>
+                                        <svg width="300" height="400" viewBox="0 0 300 400" fill="none">
+                                            {/* Basis des Arms */}
+                                            <circle cx="250" cy="50" r="30" fill="#222" />
+                                            <circle cx="250" cy="50" r="10" fill="#444" />
+                                            {/* Der Arm selbst */}
+                                            <path d="M250 50 L50 350" stroke="#444" strokeWidth="12" strokeLinecap="round" />
+                                            <path d="M250 50 L50 350" stroke="#333" strokeWidth="6" strokeLinecap="round" />
+                                            {/* Kopfstück / Cartridge */}
+                                            <rect x="30" y="340" width="40" height="20" rx="4" fill="#111" transform="rotate(-45 50 350)" />
+                                            <path d="M45 365 L45 380" stroke="#888" strokeWidth="2" /> {/* Die eigentliche Nadel */}
+                                        </svg>
+                                    </div>
                                 </div>
-                                <div className="max-w-xl space-y-12 w-full">
+                                <div className="max-w-xl space-y-12 w-full z-10">
                                     <div className="space-y-4">
-                                        <p className="text-[12px] font-black uppercase tracking-[1em] text-[#1DB954]">Now Spinning</p>
-                                        <h1 className="text-[5rem] font-black italic uppercase tracking-tighter leading-[0.85]">{track.name}</h1>
+                                        <p className="text-[14px] font-black uppercase tracking-[1em] text-[#1DB954]">Now Spinning</p>
+                                        <h1 className="text-[5.5rem] font-black italic uppercase tracking-tighter leading-[0.85]">{track.name}</h1>
                                         <p className="text-4xl font-bold text-white/40 italic">{track.artists[0].name}</p>
                                     </div>
-                                    <div className="flex items-center gap-10 bg-white/5 p-6 rounded-3xl backdrop-blur-xl border border-white/10">
-                                        <CommonQR size="w-36" url={jamUrl} />
-                                        <div className="space-y-4 flex-grow">
-                                            <p className="text-[11px] font-bold text-white/40 uppercase tracking-[0.4em]">Plattennadel bei {Math.floor(progress)}%</p>
-                                            <div className="h-1.5 bg-black/50 rounded-full overflow-hidden"><div className="h-full bg-white" style={{width: `${progress}%`}}></div></div>
+                                    <div className="flex items-center gap-12 bg-white/5 p-8 rounded-[3rem] backdrop-blur-xl border border-white/10">
+                                        <CommonQR size="w-44" url={jamUrl} padding="p-4" />
+                                        <div className="space-y-6 flex-grow">
+                                            <p className="text-[12px] font-bold text-white/40 uppercase tracking-[0.4em]">Current Position</p>
+                                            <div className="h-2 bg-black/50 rounded-full overflow-hidden"><div className="h-full bg-white" style={{width: `${progress}%`}}></div></div>
                                         </div>
                                     </div>
                                 </div>
@@ -592,7 +608,7 @@
 
                     <div className="trigger-zone"></div>
                     <div className="system-dock">
-                        {['tv', 'lyrics', 'split', 'vinyl', 'social', 'cinematic', 'minimal', 'massive'].map(mode => (
+                        {['tv', 'split', 'vinyl', 'social', 'cinematic', 'minimal', 'massive'].map(mode => (
                             <div key={mode} className={`dock-item ${layout === mode ? 'active' : ''}`} onClick={() => setLayout(mode)}>{mode}</div>
                         ))}
                         <div className="w-[1px] h-6 bg-white/10 mx-2"></div>
