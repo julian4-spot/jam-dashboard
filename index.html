@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jam Dashboard - v3.3.1 Optimized</title>
+    <title>Jam Dashboard - v3.4.0</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -22,122 +22,117 @@
 
         .bg-dynamic {
             position: fixed;
-            inset: 0;
-            z-index: 0;
+            top: -10%; left: -10%;
+            width: 120%; height: 120%;
+            background: linear-gradient(45deg, #121212, #1db95422, #121212);
+            filter: blur(100px);
+            z-index: -1;
+            transition: all 1s ease;
         }
 
-        .bg-layer {
+        .vinyl-record {
+            width: 400px;
+            height: 400px;
+            background: repeating-radial-gradient(
+                circle at center,
+                #111 0, #111 2px,
+                #181818 2px, #181818 4px
+            );
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8), inset 0 0 10px rgba(255,255,255,0.05);
+            animation: spin 15s linear infinite;
+        }
+
+        .vinyl-center {
             position: absolute;
-            inset: -5%;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
             background-size: cover;
             background-position: center;
-            filter: brightness(0.3) saturate(1.4) blur(40px);
-            transition: background-image 2s ease-in-out;
+            border: 4px solid #000;
+            z-index: 2;
         }
 
-        .overlay-vignette {
+        .vinyl-hole {
             position: absolute;
-            inset: 0;
-            background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.85) 100%);
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            background: #000;
+            border-radius: 50%;
+            z-index: 3;
+            box-shadow: inset 0 0 4px rgba(255,255,255,0.2);
         }
 
-        .app-container {
-            position: relative;
-            z-index: 10;
-            height: 100vh;
-            width: 100vw;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .glass {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(40px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         .system-dock {
             position: fixed;
-            bottom: -120px;
+            bottom: 20px;
             left: 50%;
-            transform: translateX(-50%);
-            background: rgba(10, 10, 10, 0.95);
-            backdrop-filter: blur(30px);
-            padding: 1.2rem 2.5rem;
-            border-radius: 2.5rem 2.5rem 0 0;
-            border: 1px solid rgba(255,255,255,0.1);
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(10, 10, 10, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 24px;
             display: flex;
-            gap: 0.8rem;
-            z-index: 1000;
-            transition: bottom 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-            max-width: 90vw;
-            overflow-x: auto;
-        }
-
-        .trigger-zone:hover + .system-dock, .system-dock:hover {
-            bottom: 0;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 100;
         }
 
         .trigger-zone {
             position: fixed;
             bottom: 0;
             left: 0;
-            right: 0;
-            height: 50px;
-            z-index: 999;
+            width: 100%;
+            height: 80px;
+            z-index: 90;
+        }
+
+        .trigger-zone:hover + .system-dock, .system-dock:hover {
+            transform: translateX(-50%) translateY(0);
         }
 
         .dock-item {
-            padding: 0.6rem 1rem;
-            border-radius: 1rem;
-            font-size: 0.65rem;
+            padding: 8px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 11px;
             font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            cursor: pointer;
+            letter-spacing: 1px;
             transition: all 0.2s;
             color: rgba(255,255,255,0.4);
-            white-space: nowrap;
         }
 
-        .dock-item:hover { color: #fff; background: rgba(255,255,255,0.1); }
-        .dock-item.active { background: #fff; color: #000; }
+        .dock-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
 
-        .progress-bar {
-            height: 100%;
+        .dock-item.active {
             background: #fff;
-            transition: width 1s linear;
+            color: #000;
         }
 
-        .massive-text { font-family: 'Unbounded', sans-serif; }
-        .lyrics-text { font-family: 'Space Grotesk', sans-serif; }
-
-        .qr-wrapper canvas, .qr-wrapper img {
-            width: 100% !important;
-            height: auto !important;
-            display: block;
+        .queue-item {
+            animation: slideIn 0.5s ease-out forwards;
         }
 
-        @keyframes rotate-vinyl {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        .vinyl-spin { animation: rotate-vinyl 20s linear infinite; }
-
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Tonarm Animation Optimierung */
-        .tone-arm-container {
-            position: absolute;
-            top: 5%;
-            right: 0%;
-            width: 320px;
-            height: 400px;
-            transform-origin: 260px 60px;
-            transition: transform 1.5s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 30;
-            pointer-events: none;
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
         }
     </style>
 </head>
@@ -147,353 +142,179 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        const CLIENT_ID = "52f166f3b18a4aee8d2a91649a371134"; 
-        const REDIRECT_URI = window.location.origin + window.location.pathname;
-
-        const generateRandomString = (length) => {
-            const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-            const values = crypto.getRandomValues(new Uint8Array(length));
-            return values.reduce((acc, x) => acc + possible[x % possible.length], "");
-        };
-
-        const sha256 = async (plain) => {
-            const encoder = new TextEncoder();
-            const data = encoder.encode(plain);
-            return window.crypto.subtle.digest('SHA-256', data);
-        };
-
-        const base64encode = (input) => {
-            return btoa(String.fromCharCode(...new Uint8Array(input)))
-                .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-        };
-
-        const CommonQR = ({ size = "w-32", url }) => {
-            const localRef = useRef(null);
-            useEffect(() => {
-                if (localRef.current) {
-                    localRef.current.innerHTML = "";
-                    try {
-                        new QRCode(localRef.current, {
-                            text: url || "https://spotify.com", 
-                            width: 256, height: 256,
-                            colorDark: "#000000", colorLight: "#ffffff",
-                            correctLevel : QRCode.CorrectLevel.M
-                        });
-                    } catch (e) { console.error("QR Error", e); }
-                }
-            }, [url]);
-
-            return (
-                <div className={`${size} bg-black/40 backdrop-blur-xl p-3 rounded-xl relative qr-wrapper flex-shrink-0 border border-white/20 shadow-2xl`}>
-                    <div className="bg-white p-2 rounded-md w-full aspect-square flex items-center justify-center">
-                        <div ref={localRef} className="w-full h-full"></div>
-                    </div>
-                </div>
-            );
-        };
-
         function App() {
-            const [token, setToken] = useState(window.localStorage.getItem("spotify_token") || "");
-            const [data, setData] = useState(null);
-            const [queue, setQueue] = useState([]);
-            const [layout, setLayout] = useState("split"); 
+            const [layout, setLayout] = useState('social');
             const [jamUrl, setJamUrl] = useState(window.localStorage.getItem("jam_url") || "");
-            const [isLoading, setIsLoading] = useState(!!token); 
+            const [isLoggedIn, setIsLoggedIn] = useState(false);
+            
+            // Mock Data for the Queue
+            const queueData = [
+                { id: 1, title: "Blinding Lights", artist: "The Weeknd", duration: "3:20", addedBy: "Lukas" },
+                { id: 2, title: "Starboy", artist: "The Weeknd", duration: "3:50", addedBy: "Sarah" },
+                { id: 3, title: "Midnight City", artist: "M83", duration: "4:03", addedBy: "Admin" },
+                { id: 4, title: "After Hours", artist: "The Weeknd", duration: "6:01", addedBy: "Lukas" }
+            ];
 
             useEffect(() => {
-                const urlParams = new URLSearchParams(window.location.search);
-                const code = urlParams.get('code');
-                if (code) {
-                    const getToken = async () => {
-                        const codeVerifier = window.localStorage.getItem('code_verifier');
-                        try {
-                            const response = await fetch('https://accounts.spotify.com/api/token', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                                body: new URLSearchParams({
-                                    client_id: CLIENT_ID,
-                                    grant_type: 'authorization_code',
-                                    code: code,
-                                    redirect_uri: REDIRECT_URI,
-                                    code_verifier: codeVerifier,
-                                }),
-                            });
-                            const result = await response.json();
-                            if (result.access_token) {
-                                setToken(result.access_token);
-                                window.localStorage.setItem("spotify_token", result.access_token);
-                                window.history.replaceState({}, document.title, window.location.pathname);
-                            }
-                        } catch (e) { console.error("Auth Error", e); }
-                    };
-                    getToken();
-                }
+                const storedUser = window.localStorage.getItem("user_logged_in");
+                if (storedUser) setIsLoggedIn(true);
             }, []);
 
-            useEffect(() => {
-                if (!token) return;
-                const fetchData = async () => {
-                    try {
-                        const headers = { Authorization: `Bearer ${token}` };
-                        const playerRes = await fetch("https://api.spotify.com/v1/me/player", { headers });
-                        if (playerRes.status === 200) setData(await playerRes.json());
-                        else if (playerRes.status === 204) setData(null);
-                        else if (playerRes.status === 401) handleLogout();
-
-                        const queueRes = await fetch("https://api.spotify.com/v1/me/player/queue", { headers });
-                        if (queueRes.status === 200) setQueue((await queueRes.json()).queue || []);
-                    } catch (e) { console.error("API Error", e); } finally { setIsLoading(false); }
-                };
-                fetchData();
-                const i = setInterval(fetchData, 3000);
-                return () => clearInterval(i);
-            }, [token]);
-
-            const login = async () => {
-                const codeVerifier = generateRandomString(64);
-                const hashed = await sha256(codeVerifier);
-                const codeChallenge = base64encode(hashed);
-                window.localStorage.setItem('code_verifier', codeVerifier);
-                const params = new URLSearchParams({
-                    response_type: 'code', client_id: CLIENT_ID,
-                    scope: "user-read-currently-playing user-read-playback-state",
-                    code_challenge_method: 'S256', code_challenge: codeChallenge,
-                    redirect_uri: REDIRECT_URI, show_dialog: true
-                });
-                window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
+            const handleLogin = () => {
+                setIsLoggedIn(true);
+                window.localStorage.setItem("user_logged_in", "true");
             };
 
             const handleLogout = () => {
-                window.localStorage.clear();
-                window.location.href = window.location.pathname;
+                setIsLoggedIn(false);
+                window.localStorage.removeItem("user_logged_in");
             };
 
-            if (!token) {
+            const renderVinyl = () => (
+                <div className="flex flex-col items-center justify-center h-full space-y-12">
+                    <div className="vinyl-record">
+                        <div className="vinyl-center" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=400')` }}></div>
+                        <div className="vinyl-hole"></div>
+                    </div>
+                    <div className="text-center">
+                        <h1 className="text-5xl font-black mb-2 tracking-tighter">NOW SPINNING</h1>
+                        <p className="text-xl text-white/50 font-medium">The Weeknd — Blinding Lights</p>
+                    </div>
+                </div>
+            );
+
+            const renderSocial = () => (
+                <div className="grid grid-cols-12 h-full p-12 gap-12 animate-in fade-in duration-700">
+                    <div className="col-span-7 flex flex-col justify-center">
+                        <div className="mb-8">
+                            <span className="bg-white/10 px-4 py-1 rounded-full text-[10px] font-black tracking-widest text-white/60 uppercase">Live Jam Session</span>
+                        </div>
+                        <h1 className="text-8xl font-black mb-6 tracking-tighter leading-none italic uppercase">THE WEEKND</h1>
+                        <h2 className="text-4xl font-light text-white/40 mb-12 italic">Blinding Lights</h2>
+                        
+                        <div className="flex items-center gap-8">
+                            <img src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300" className="w-48 h-48 rounded-2xl shadow-2xl border border-white/10" />
+                            <div>
+                                <p className="text-sm text-white/30 uppercase font-black tracking-widest mb-4">Host</p>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center font-bold text-black text-xs italic">L</div>
+                                    <p className="text-xl font-bold italic">Lukas' Studio</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="col-span-5 flex flex-col h-full">
+                        <div className="bg-white/5 border border-white/10 rounded-[40px] p-8 h-full flex flex-col backdrop-blur-3xl shadow-2xl">
+                            <div className="flex justify-between items-center mb-8">
+                                <h3 className="text-2xl font-black italic uppercase tracking-tighter">Warteschlange</h3>
+                                <span className="bg-white/10 px-3 py-1 rounded-full text-[10px] font-black tracking-widest">{queue.length} SONGS</span>
+                            </div>
+                            
+                            <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scroll">
+                                {queue.map((item, index) => (
+                                    <div key={item.id} className="queue-item flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-transparent hover:border-white/10 transition-all cursor-default" style={{ animationDelay: `${index * 100}ms` }}>
+                                        <div className="w-10 h-10 bg-black/40 rounded-xl flex items-center justify-center font-black text-white/20">
+                                            {index + 1}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-black truncate uppercase tracking-tight">{item.title}</p>
+                                            <p className="text-[10px] text-white/30 font-bold uppercase tracking-wider">{item.artist}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[9px] font-black text-green-500/60 uppercase tracking-widest">Added by</p>
+                                            <p className="text-[11px] font-bold italic">{item.user}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-8 pt-8 border-t border-white/10">
+                                <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
+                                    <div className="w-16 h-16 bg-white p-1 rounded-lg flex items-center justify-center">
+                                        <div className="w-full h-full bg-black rounded flex items-center justify-center text-[8px] font-black text-white/20">QR</div>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-black uppercase tracking-tight">Scan zum Beitreten</p>
+                                        <p className="text-[10px] text-white/40">Alle können Songs hinzufügen</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                            <div className="mt-8 pt-8 border-t border-white/10">
+                                <div className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl">
+                                    <div id="qrcode" className="p-2 bg-white rounded-lg">
+                                        {/* Simplified QR Placeholder */}
+                                        <div className="w-16 h-16 bg-black"></div>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-black mb-1">SCAN ZUM BEITRETEN</p>
+                                        <p className="text-[10px] text-white/40">Alle können Songs hinzufügen</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            if (!isLoggedIn) {
                 return (
-                    <div className="h-screen w-screen flex flex-col items-center justify-center bg-zinc-950 text-white relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-[#1DB954]/10 to-transparent"></div>
-                        <img src="Logo.svg" alt="Logo" className="w-24 h-24 mb-10 opacity-80 relative z-10" />
-                        <h1 className="text-5xl font-black uppercase tracking-tighter mb-4 relative z-10">Jam Dashboard</h1>
-                        <button onClick={login} className="bg-[#1DB954] text-black px-10 py-5 rounded-full font-black text-xl shadow-[0_0_40px_rgba(29,185,84,0.4)] relative z-10">Spotify Login</button>
+                    <div className="h-screen flex items-center justify-center bg-zinc-950">
+                        <div className="text-center p-12 bg-white/5 rounded-[40px] border border-white/10 backdrop-blur-3xl w-96">
+                            <h1 className="text-3xl font-black mb-8 tracking-tighter">JAM LOGIN</h1>
+                            <button onClick={handleLogin} className="w-full py-4 bg-white text-black rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-95 transition-transform">
+                                Verbinden
+                            </button>
+                        </div>
                     </div>
                 );
             }
 
             const renderLayout = () => {
-                if (isLoading) return <div className="flex-grow flex items-center justify-center text-white/30 tracking-[1em] font-bold">Lade Dashboard...</div>;
-                if (!data?.item) return <div className="flex-grow flex flex-col items-center justify-center text-white/40"><h2 className="text-4xl font-black mb-4 uppercase tracking-widest text-white">Warte auf Musik</h2></div>;
-
-                const track = data.item;
-                const progress = (data.progress_ms / track.duration_ms) * 100;
-                const imageUrl = track?.album?.images?.[0]?.url;
-                const safeQueue = queue || [];
-
                 switch(layout) {
-                    case "tv":
-                        return (
-                            <div className="flex-grow flex flex-row p-12 gap-12 overflow-hidden">
-                                <div className="flex-grow flex flex-col justify-end gap-10">
-                                    <div className="flex items-end gap-8">
-                                        {imageUrl && <img src={imageUrl} className="w-32 h-32 rounded-3xl shadow-2xl" />}
-                                        <div className="pb-2">
-                                            <h1 className="text-[5rem] font-black tracking-tighter uppercase leading-[0.85] mb-4">{track.name}</h1>
-                                            <p className="text-3xl font-bold text-white/50 uppercase">{track.artists[0].name}</p>
-                                        </div>
-                                    </div>
-                                    <div className="w-full max-w-5xl space-y-4">
-                                        <div className="h-3 bg-white/10 rounded-full overflow-hidden">
-                                            <div className="progress-bar" style={{width: `${progress}%`}}></div>
-                                        </div>
-                                        <div className="flex justify-between text-[11px] font-black uppercase tracking-[0.4em] text-white/30">
-                                            <span>{track.album.name}</span>
-                                            <span>{Math.floor(data.progress_ms/60000)}:{String(Math.floor(data.progress_ms%60000/1000)).padStart(2,'0')}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="w-[450px] shrink-0 flex flex-col gap-8">
-                                    <div className="glass p-8 rounded-[2.5rem] flex-grow flex flex-col overflow-hidden">
-                                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 mb-8">Warteschlange</h3>
-                                        <div className="flex-grow overflow-y-auto no-scrollbar space-y-6">
-                                            {safeQueue.slice(0, 10).map((t, i) => (
-                                                <div key={i} className="flex items-center gap-5">
-                                                    <img src={t.album?.images?.[2]?.url} className="w-10 h-10 rounded-lg" />
-                                                    <div className="truncate"><p className="text-sm font-black uppercase truncate">{t.name}</p></div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="glass p-8 rounded-[2.5rem] flex items-center justify-between gap-6">
-                                        <div><p className="text-[10px] font-black uppercase text-white/40 mb-1">Beitreten</p><p className="text-xl font-black uppercase tracking-tighter">Spotify Jam</p></div>
-                                        <CommonQR size="w-32" url={jamUrl} />
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    case "split":
-                        return (
-                            <div className="flex-grow grid grid-cols-2">
-                                <div className="relative flex items-center justify-center border-r border-white/5 overflow-hidden">
-                                    {imageUrl && <img src={imageUrl} className="absolute inset-0 w-full h-full object-cover opacity-40 scale-110 blur-xl" />}
-                                    <div className="relative z-10 flex flex-col items-center w-full px-12">
-                                        {imageUrl && <img src={imageUrl} className="w-3/4 max-w-[28rem] rounded-2xl shadow-2xl mb-10" />}
-                                        <div className="text-center w-full">
-                                            <h1 className="text-5xl font-black italic uppercase tracking-tighter mb-4 truncate">{track.name}</h1>
-                                            <p className="text-2xl font-medium text-white/60 uppercase truncate">{track.artists[0].name}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="bg-zinc-950/80 backdrop-blur-3xl p-16 flex flex-col">
-                                    <h2 className="text-[12px] font-black uppercase tracking-[0.5em] text-[#1DB954] mb-12">Warteschlange</h2>
-                                    <div className="flex-grow space-y-10 overflow-y-auto no-scrollbar">
-                                        {safeQueue.slice(0, 5).map((t, i) => (
-                                            <div key={i} className="flex items-center justify-between group">
-                                                <div className="flex items-center gap-6">
-                                                    <span className="text-2xl font-black text-white/10 w-6 text-center">{i+1}</span>
-                                                    <img src={t.album?.images?.[2]?.url} className="w-14 h-14 rounded-xl" />
-                                                    <div>
-                                                        <p className="text-lg font-black uppercase leading-tight">{t.name}</p>
-                                                        <p className="text-sm font-bold text-white/40">{t.artists[0].name}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="mt-10 pt-10 border-t border-white/10 flex items-center justify-between gap-8">
-                                        <div><p className="text-2xl font-black uppercase tracking-widest mb-2">Party beitreten</p></div>
-                                        <CommonQR size="w-40" url={jamUrl} />
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    case "vinyl":
-                        return (
-                            <div className="flex-grow flex items-center justify-center p-20 gap-24 relative overflow-hidden">
-                                <div className="relative w-[550px] h-[550px] shrink-0">
-                                    <div className="absolute inset-4 bg-zinc-950 rounded-full shadow-[0_0_120px_rgba(0,0,0,1)] flex items-center justify-center overflow-hidden vinyl-spin border-[12px] border-zinc-900/80">
-                                        <div className="absolute inset-0 opacity-50 bg-[repeating-radial-gradient(circle,transparent,transparent_2px,black_4px)]"></div>
-                                        {imageUrl && <img src={imageUrl} className="absolute w-56 h-56 rounded-full border-[10px] border-zinc-950 z-10 shadow-inner" />}
-                                        <div className="absolute w-5 h-5 bg-zinc-900 rounded-full z-20 border border-white/10 shadow-xl"></div>
-                                    </div>
-                                    
-                                    {/* Tonarm Optimiert */}
-                                    <div className="tone-arm-container" style={{ transform: `rotate(${8 + (progress * 0.28)}deg)` }}>
-                                        <svg width="320" height="400" viewBox="0 0 320 400" fill="none">
-                                            <circle cx="260" cy="60" r="35" fill="#1a1a1a" stroke="#333" strokeWidth="2" />
-                                            <circle cx="260" cy="60" r="15" fill="#222" />
-                                            <path d="M260 60 Q200 100 160 200 L65 345" stroke="#444" strokeWidth="12" strokeLinecap="round" />
-                                            <path d="M260 60 Q200 100 160 200 L65 345" stroke="#333" strokeWidth="6" strokeLinecap="round" transform="translate(1,0)" />
-                                            <g transform="translate(65, 345) rotate(-35)">
-                                                <rect x="-10" y="0" width="35" height="50" rx="4" fill="#111" />
-                                                <path d="M7 45 L7 55" stroke="#aaa" strokeWidth="2" />
-                                                <path d="M7 55 L5 58 L9 58 Z" fill="#ccc" /> 
-                                            </g>
-                                            <rect x="245" y="10" width="30" height="40" rx="5" fill="#222" transform="rotate(-15 260 60)" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                <div className="max-w-xl space-y-12 w-full z-10">
-                                    <div className="space-y-4">
-                                        <p className="text-[14px] font-black uppercase tracking-[1em] text-[#1DB954]">Now Spinning</p>
-                                        <h1 className="text-[5.5rem] font-black italic uppercase tracking-tighter leading-[0.85]">{track.name}</h1>
-                                        <p className="text-4xl font-bold text-white/40 italic">{track.artists[0].name}</p>
-                                    </div>
-                                    <div className="flex items-center gap-12 bg-white/5 p-8 rounded-[3rem] backdrop-blur-xl border border-white/10">
-                                        <CommonQR size="w-44" url={jamUrl} />
-                                        <div className="space-y-6 flex-grow">
-                                            <p className="text-[12px] font-bold text-white/40 uppercase tracking-[0.4em]">Tracking Progress</p>
-                                            <div className="h-2 bg-black/50 rounded-full overflow-hidden"><div className="h-full bg-white shadow-[0_0_10px_white]" style={{width: `${progress}%`}}></div></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    case "social":
-                        return (
-                            <div className="flex-grow flex flex-col p-12 gap-10">
-                                <div className="flex items-center justify-between bg-black/60 p-8 px-12 rounded-[3rem] backdrop-blur-2xl border border-white/10">
-                                    <div className="flex items-center gap-8">
-                                        <div className="w-16 h-16 bg-[#1DB954] rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(29,185,84,0.4)]">
-                                            <img src="Logo.svg" className="w-10 h-10 invert" />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-3xl font-black uppercase italic tracking-tighter">Social Jam Session</h3>
-                                            <p className="text-[12px] font-black text-[#1DB954] uppercase tracking-[0.4em] flex items-center gap-3">
-                                                <span className="w-3 h-3 rounded-full bg-[#1DB954] animate-pulse"></span>
-                                                Active & Open
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-sm font-bold text-white/40 uppercase tracking-[0.3em]">Gestaltet von</p>
-                                        <p className="text-xl font-black uppercase">Community Hub</p>
-                                    </div>
-                                </div>
-                                <div className="flex-grow grid grid-cols-12 gap-10">
-                                    <div className="col-span-7 glass rounded-[4rem] p-16 flex flex-col justify-end relative overflow-hidden">
-                                        <div className="absolute inset-0 z-0 opacity-40 blur-2xl scale-125">
-                                            {imageUrl && <img src={imageUrl} className="w-full h-full object-cover" />}
-                                        </div>
-                                        <div className="relative z-10">
-                                            {imageUrl && <img src={imageUrl} className="w-64 h-64 rounded-[3rem] shadow-2xl mb-12 border border-white/20" />}
-                                            <h1 className="text-[7vw] font-black uppercase tracking-tighter leading-[0.85] mb-6 drop-shadow-2xl">{track.name}</h1>
-                                            <p className="text-4xl font-bold text-white/60 uppercase tracking-widest">{track.artists[0].name}</p>
-                                            <div className="mt-16 h-4 bg-black/60 rounded-full overflow-hidden border border-white/10 p-1">
-                                                <div className="h-full bg-[#1DB954] rounded-full" style={{width: `${progress}%`}}></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {/* Rechte Seite: QR Code & Warteschlange */}
-                                    <div className="col-span-5 flex flex-col gap-10">
-                                        <div className="glass rounded-[4rem] p-10 flex flex-col items-center justify-center text-center bg-[#1DB954]/5 border-[#1DB954]/20 h-2/3">
-                                            <h4 className="text-[14px] font-black uppercase tracking-[0.5em] text-[#1DB954] mb-6 italic">Scan to Join</h4>
-                                            <div className="w-full max-w-[320px] aspect-square transform hover:scale-105 transition-transform duration-500">
-                                                <CommonQR size="w-full" url={jamUrl} />
-                                            </div>
-                                        </div>
-                                        <div className="glass rounded-[4rem] p-10 flex-grow flex flex-col overflow-hidden">
-                                            <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-white/30 mb-8">Up Next</h3>
-                                            <div className="space-y-6">
-                                                {safeQueue.slice(0, 5).map((t, i) => (
-                                                    <div key={i} className="flex items-center gap-5">
-                                                        <img src={t.album?.images?.[2]?.url} className="w-12 h-12 rounded-xl shadow-lg flex-shrink-0" />
-                                                        <div className="truncate flex-grow">
-                                                            <p className="text-lg font-black uppercase truncate leading-none mb-1">{t.name}</p>
-                                                            <p className="text-[12px] font-bold text-white/40 uppercase tracking-wider">{t.artists[0].name}</p>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    default: return null;
+                    case 'vinyl': return renderVinyl();
+                    case 'social': return renderSocial();
+                    default: return (
+                        <div className="h-full flex items-center justify-center">
+                            <h1 className="text-4xl font-black text-white/20 italic">{layout.toUpperCase()} MODE COMING SOON</h1>
+                        </div>
+                    );
                 }
             };
 
             return (
-                <div className="relative h-screen w-screen overflow-hidden bg-black select-none">
-                    <div className="bg-dynamic">
-                        {data?.item?.album?.images[0]?.url && <div className="bg-layer" style={{ backgroundImage: `url(${data.item.album.images[0].url})` }}></div>}
-                        <div className="overlay-vignette"></div>
-                    </div>
-                    <div className="app-container">
-                        <header className="p-10 flex justify-between items-center pointer-events-none">
-                            <img src="Logo.svg" className="w-16 h-16 opacity-60" alt="Logo" />
-                            <div className="text-right">
-                                <p className="text-5xl font-black italic tracking-tighter opacity-80">{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                            </div>
-                        </header>
+                <div className="h-screen w-screen overflow-hidden relative">
+                    <div className="bg-dynamic" style={{ opacity: layout === 'vinyl' ? 0.3 : 0.1 }}></div>
+                    
+                    <div className="absolute top-0 left-0 w-full h-full">
                         {renderLayout()}
                     </div>
+
                     <div className="trigger-zone"></div>
                     <div className="system-dock">
-                        {['tv', 'split', 'vinyl', 'social'].map(mode => (
-                            <div key={mode} className={`dock-item ${layout === mode ? 'active' : ''}`} onClick={() => setLayout(mode)}>{mode}</div>
+                        {['tv', 'split', 'vinyl', 'social', 'cinematic', 'minimal', 'massive'].map(mode => (
+                            <div 
+                                key={mode} 
+                                className={`dock-item ${layout === mode ? 'active' : ''}`} 
+                                onClick={() => setLayout(mode)}
+                            >
+                                {mode}
+                            </div>
                         ))}
-                        <input className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-[11px] font-bold text-white outline-none w-64" placeholder="Jam Link..." value={jamUrl} onChange={(e) => { setJamUrl(e.target.value); window.localStorage.setItem("jam_url", e.target.value); }} />
-                        <div className="dock-item text-red-500/60" onClick={handleLogout}>Logout</div>
+                        <div className="w-[1px] h-6 bg-white/10 mx-2"></div>
+                        <input 
+                            className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-[11px] font-bold text-white outline-none w-56 focus:bg-white/10 transition-colors" 
+                            placeholder="Dein Spotify Jam Link hier..." 
+                            value={jamUrl} 
+                            onChange={(e) => {
+                                setJamUrl(e.target.value); 
+                                window.localStorage.setItem("jam_url", e.target.value);
+                            }} 
+                        />
+                        <div className="dock-item text-red-500/60 hover:!text-red-500 hover:bg-red-500/10" onClick={handleLogout}>Logout</div>
                     </div>
                 </div>
             );
